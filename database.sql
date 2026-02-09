@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS budgets (
   "discountAmount" NUMERIC DEFAULT 0,
   "discountDesc" TEXT,
   total NUMERIC DEFAULT 0,
-  status TEXT DEFAULT 'confirmado'
+  status TEXT DEFAULT 'pendiente' CHECK (status IN ('pendiente', 'emitido'))
 );
 
 -- Habilitar RLS para todas las tablas

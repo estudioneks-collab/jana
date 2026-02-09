@@ -1,7 +1,7 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Product, BudgetItem, Transaction, Client, Budget } from '../types';
-import { Plus, Trash2, FileText, Download, User, ShoppingBag, X, Search, ChevronDown, Check, Leaf, History, Edit3, Save } from 'lucide-react';
+import { Plus, Trash2, FileText, Download, User, ShoppingBag, X, Search, ChevronDown, Check, Leaf, History, Edit3, Save, Eye, Lock, Unlock } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { db, getSupabase } from '../lib/supabase';
@@ -18,6 +18,7 @@ interface Props {
 const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets, setTransactions, logo }) => {
   const [view, setView] = useState<'create' | 'history'>('create');
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientSearch, setClientSearch] = useState('');
@@ -27,6 +28,7 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
   const [utilityPercentage, setUtilityPercentage] = useState(100); 
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountDesc, setDiscountDesc] = useState('');
+  const [status, setStatus] = useState<'pendiente' | 'emitido'>('pendiente');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const filteredClients = useMemo(() => {
@@ -38,11 +40,16 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
   }, [clients, clientSearch]);
 
   const loadBudgetForEdit = (budget: Budget) => {
+    if (budget.status === 'emitido') {
+      alert("Este presupuesto ya fue emitido y no puede editarse. Si necesitas cambios, crea uno nuevo.");
+      return;
+    }
     setEditingBudgetId(budget.id);
     setItems(budget.items);
     setUtilityPercentage(budget.utilityPercentage);
     setDiscountAmount(budget.discountAmount);
     setDiscountDesc(budget.discountDesc);
+    setStatus(budget.status);
     const client = clients.find(c => c.id === budget.clientId);
     setSelectedClient(client || null);
     setView('create');
@@ -55,6 +62,7 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
     setDiscountAmount(0);
     setDiscountDesc('');
     setUtilityPercentage(100);
+    setStatus('pendiente');
   };
 
   const addItem = () => {
@@ -95,72 +103,84 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
-    doc.setFillColor(44, 62, 80); 
-    doc.rect(0, 0, 210, 45, 'F');
+    const pageWidth = doc.internal.pageSize.getWidth();
     
     if (logo) {
-      try {
-        doc.addImage(logo, 'PNG', 15, 8, 30, 30);
-      } catch (e) { console.error(e); }
+      try { doc.addImage(logo, 'PNG', 20, 15, 45, 45, undefined, 'FAST'); } catch (e) {}
     }
 
-    doc.setFont('helvetica', 'bolditalic');
-    doc.setFontSize(28);
-    doc.setTextColor(255, 255, 255);
-    doc.text('Jana Diseños', logo ? 50 : 105, 28, { align: logo ? 'left' : 'center' });
+    doc.setTextColor(44, 62, 80);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(32);
+    doc.text('PRESUPUESTO', pageWidth - 20, 35, { align: 'right' });
+    
+    doc.setFontSize(14);
+    doc.text(`# ${editingBudgetId?.slice(-6) || 'NUEVO'}`, pageWidth - 20, 48, { align: 'right' });
+    doc.text(`${new Date().toLocaleDateString()}`, pageWidth - 20, 56, { align: 'right' });
+
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Cliente', 25, 80);
+    doc.setFontSize(14);
+    doc.setTextColor(44, 62, 80);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${selectedClient?.name || 'Consumidor Final'}`, 25, 88);
     
     doc.setFontSize(10);
-    doc.setTextColor(255, 255, 255, 0.6);
-    doc.text('ALTA JOYERÍA ARTESANAL', logo ? 50 : 105, 36, { align: logo ? 'left' : 'center' });
-
+    doc.setTextColor(150, 150, 150);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Teléfono:', 25, 98);
     doc.setTextColor(44, 62, 80);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('CLIENTE:', 20, 60);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${selectedClient?.name || 'Venta General'}`, 20, 67);
-    if (selectedClient?.instagram) doc.text(`Instagram: @${selectedClient.instagram}`, 20, 73);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('FECHA:', 140, 60);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${new Date().toLocaleDateString()}`, 140, 67);
+    doc.text(`${selectedClient?.phone || '-'}`, 45, 98);
 
     const tableData = items.map(item => {
       const prod = products.find(p => p.id === item.productId);
-      return [
-        prod?.name || '-', 
-        item.quantity, 
-        `$${item.unitCost.toLocaleString()}`, 
-        `$${item.subtotal.toLocaleString()}`
-      ];
+      return [prod?.name || 'Diseño Jana', item.quantity, `$${item.unitCost.toLocaleString()}`, `$${item.subtotal.toLocaleString()}`];
     });
 
     autoTable(doc, {
-      startY: 85,
-      head: [['Diseño Seleccionado', 'Cant.', 'Costo Unit.', 'Subtotal']],
+      startY: 110,
+      head: [['Descripción', 'Cantidad', 'Unitario', 'Subtotal']],
       body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [93, 127, 142], textColor: [255, 255, 255] }, 
-      styles: { fontSize: 9 },
+      theme: 'plain',
+      headStyles: { fillColor: [242, 239, 237], textColor: [93, 127, 142], fontStyle: 'bold', halign: 'center' },
+      styles: { fontSize: 11, cellPadding: 6, halign: 'center', textColor: [44, 62, 80] },
+      columnStyles: { 0: { halign: 'left', cellWidth: 80 } },
+      margin: { left: 20, right: 20 }
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    const summaryX = pageWidth - 20;
+
     doc.setFontSize(10);
-    doc.text(`Costo de Producción: $${rawCostTotal.toLocaleString()}`, 130, finalY);
-    doc.text(`Utilidad aplicada (${utilityPercentage}%): $${utilityAmount.toLocaleString()}`, 130, finalY + 7);
+    doc.setTextColor(93, 127, 142);
+    doc.setFillColor(242, 239, 237);
+    doc.rect(120, finalY, 70, 8, 'F');
+    doc.text('Subtotal', 130, finalY + 5.5);
+    doc.text(`$${subtotalWithUtility.toLocaleString()}`, summaryX - 5, finalY + 5.5, { align: 'right' });
+
     if (discountAmount > 0) {
-      doc.setTextColor(231, 76, 60);
-      doc.text(`Descuento especial: -$${discountAmount.toLocaleString()}`, 130, finalY + 14);
-      doc.setTextColor(44, 62, 80);
+      doc.setFillColor(230, 240, 245);
+      doc.rect(120, finalY + 10, 70, 8, 'F');
+      doc.text(`Descuento ${discountDesc || ''}`, 130, finalY + 15.5);
+      doc.text(`-$${discountAmount.toLocaleString()}`, summaryX - 5, finalY + 15.5, { align: 'right' });
     }
-    doc.setFontSize(16);
+
+    doc.setFontSize(22);
+    doc.setTextColor(44, 62, 80);
     doc.setFont('helvetica', 'bold');
-    doc.text(`TOTAL: $${finalTotal.toLocaleString()}`, 130, finalY + 25);
-    doc.save(`Presupuesto-Jana-${selectedClient?.name || 'Cliente'}.pdf`);
+    doc.text('Total Final', 140, finalY + 32, { align: 'right' });
+    doc.text(`$${finalTotal.toLocaleString()}`, summaryX, finalY + 32, { align: 'right' });
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(93, 127, 142);
+    doc.text('Gracias por elegir Jana Diseños', pageWidth / 2, 280, { align: 'center' });
+
+    doc.save(`Jana-Presupuesto-${selectedClient?.name || 'Cliente'}.pdf`);
   };
 
-  const handleRegisterSale = async () => {
+  const handleSaveBudget = async (finalStatus: 'pendiente' | 'emitido') => {
     if (items.length === 0) return alert('Agrega al menos un producto.');
     setIsSubmitting(true);
 
@@ -174,24 +194,26 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
       discountAmount,
       discountDesc,
       total: finalTotal,
-      status: 'confirmado'
-    };
-
-    const newTransaction: Transaction = {
-      id: `sale-${id}`,
-      date: newBudget.date,
-      type: 'ingreso',
-      category: 'venta',
-      description: `Venta: ${selectedClient?.name || 'Venta General'} - Jana Diseños`,
-      amount: finalTotal
+      status: finalStatus
     };
 
     try {
       if (getSupabase()) {
-        await Promise.all([
-          db.upsert('budgets', newBudget),
-          db.upsert('transactions', newTransaction)
-        ]);
+        await db.upsert('budgets', newBudget);
+        
+        // Solo registrar en contabilidad si se emite
+        if (finalStatus === 'emitido') {
+          const newTransaction: Transaction = {
+            id: `sale-${id}`,
+            date: newBudget.date,
+            type: 'ingreso',
+            category: 'venta',
+            description: `Presupuesto Emitido: ${selectedClient?.name || 'Venta General'}`,
+            amount: finalTotal
+          };
+          await db.upsert('transactions', newTransaction);
+          setTransactions(prev => [newTransaction, ...prev.filter(t => t.id !== `sale-${id}`)]);
+        }
       }
       
       if (editingBudgetId) {
@@ -200,16 +222,12 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
         setBudgets(prev => [newBudget, ...prev]);
       }
       
-      setTransactions(prev => {
-        const filtered = prev.filter(t => t.id !== `sale-${id}`);
-        return [newTransaction, ...filtered];
-      });
-
-      alert(editingBudgetId ? 'Presupuesto actualizado.' : '¡Venta registrada exitosamente!');
+      alert(finalStatus === 'emitido' ? '¡Presupuesto emitido y bloqueado!' : 'Borrador guardado correctamente.');
       resetForm();
       setView('history');
+      setIsPreviewOpen(false);
     } catch (e) {
-      alert("Error al guardar presupuesto. Asegúrate de haber ejecutado el SQL en Supabase.");
+      alert("Error al guardar presupuesto.");
     } finally {
       setIsSubmitting(false);
     }
@@ -231,7 +249,7 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h2 className="text-5xl font-bold brand-font text-[#2C3E50] italic leading-tight">Ventas y Presupuestos</h2>
-          <p className="text-[#5D7F8E] font-medium tracking-[0.1em] uppercase text-xs mt-2">Crea y revisa tu historial de comercialización</p>
+          <p className="text-[#5D7F8E] font-medium tracking-[0.1em] uppercase text-xs mt-2">Crea, revisa y emite tus cotizaciones</p>
         </div>
         <div className="flex gap-4">
            <button 
@@ -287,18 +305,11 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
                       </div>
                     </div>
                     <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                      <div 
-                        className="px-6 py-4 hover:bg-[#F2EFED] cursor-pointer flex items-center justify-between group"
-                        onClick={() => { setSelectedClient(null); setIsClientDropdownOpen(false); }}
-                      >
+                      <div className="px-6 py-4 hover:bg-[#F2EFED] cursor-pointer" onClick={() => { setSelectedClient(null); setIsClientDropdownOpen(false); }}>
                         <span className="text-sm font-medium text-slate-400">Venta General (Sin registrar)</span>
                       </div>
                       {filteredClients.map(client => (
-                        <div 
-                          key={client.id}
-                          className="px-6 py-4 hover:bg-[#F2EFED] cursor-pointer flex items-center justify-between group"
-                          onClick={() => { setSelectedClient(client); setIsClientDropdownOpen(false); }}
-                        >
+                        <div key={client.id} className="px-6 py-4 hover:bg-[#F2EFED] cursor-pointer flex items-center justify-between" onClick={() => { setSelectedClient(client); setIsClientDropdownOpen(false); }}>
                           <div>
                             <p className="font-bold text-[#2C3E50]">{client.name}</p>
                             {client.instagram && <p className="text-[10px] text-[#5D7F8E]">@{client.instagram}</p>}
@@ -315,12 +326,8 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
             <div className="bg-white p-8 rounded-[2.5rem] border border-white shadow-xl shadow-slate-200/50 space-y-6">
               <div className="flex items-center justify-between border-b border-[#F2EFED] pb-6">
                 <h3 className="text-xs font-bold text-[#2C3E50] uppercase tracking-[0.2em]">Piezas del Presupuesto</h3>
-                <button 
-                  onClick={addItem}
-                  className="bg-[#F2EFED] text-[#5D7F8E] hover:bg-[#5D7F8E] hover:text-white px-5 py-2.5 rounded-xl transition-all font-bold text-[10px] uppercase tracking-widest flex items-center gap-2"
-                >
-                  <Plus size={16} />
-                  Añadir Diseño
+                <button onClick={addItem} className="bg-[#F2EFED] text-[#5D7F8E] hover:bg-[#5D7F8E] hover:text-white px-5 py-2.5 rounded-xl transition-all font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
+                  <Plus size={16} /> Añadir Diseño
                 </button>
               </div>
               
@@ -328,7 +335,6 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
                 {items.map((item, idx) => (
                   <div key={idx} className="flex items-center gap-6 bg-[#F2EFED]/30 p-5 rounded-3xl border border-white">
                     <div className="flex-1">
-                      <label className="block text-[8px] font-bold text-slate-400 uppercase mb-2">Seleccionar Diseño</label>
                       <select 
                         className="w-full bg-white border-none rounded-xl px-4 py-2.5 text-sm font-bold text-[#2C3E50] outline-none shadow-sm"
                         value={item.productId}
@@ -339,125 +345,47 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
                         ))}
                       </select>
                     </div>
-                    <div className="w-24">
-                      <label className="block text-[8px] font-bold text-slate-400 uppercase mb-2 text-center">Cantidad</label>
-                      <input 
-                        type="number"
-                        className="w-full bg-white border-none rounded-xl px-2 py-2.5 text-center font-bold text-[#2C3E50] outline-none shadow-sm"
-                        value={item.quantity}
-                        onChange={e => updateItem(idx, 'quantity', e.target.value)}
-                      />
-                    </div>
-                    <div className="w-28 text-right">
-                      <p className="text-[8px] font-bold text-[#5D7F8E] uppercase mb-2">Subtotal Costo</p>
-                      <p className="text-lg font-bold text-[#2C3E50]">${item.subtotal.toLocaleString()}</p>
-                    </div>
-                    <button onClick={() => removeItem(idx)} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-rose-500 transition-colors">
-                      <Trash2 size={20} />
-                    </button>
+                    <input type="number" className="w-20 bg-white border-none rounded-xl px-2 py-2.5 text-center font-bold" value={item.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} />
+                    <div className="w-28 text-right font-bold text-[#2C3E50]">${item.subtotal.toLocaleString()}</div>
+                    <button onClick={() => removeItem(idx)} className="text-slate-300 hover:text-rose-500"><Trash2 size={20} /></button>
                   </div>
                 ))}
-                {items.length === 0 && (
-                  <div className="py-16 text-center">
-                    <ShoppingBag size={48} className="mx-auto text-[#F2EFED] mb-4" />
-                    <p className="text-slate-300 italic text-sm">El presupuesto está vacío. Añade una pieza del catálogo.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-white p-8 rounded-[2.5rem] border border-white shadow-xl shadow-slate-200/50">
-              <h3 className="text-xs font-bold text-[#2C3E50] uppercase tracking-[0.2em] mb-6">Ajuste de Precio Final</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 ml-2">Monto de Descuento ($)</label>
-                  <input 
-                    type="number"
-                    className="w-full px-6 py-4 bg-[#F2EFED]/50 border-none rounded-[1.5rem] outline-none font-bold text-[#2C3E50] shadow-inner"
-                    value={discountAmount}
-                    onChange={e => setDiscountAmount(Number(e.target.value))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 ml-2">Motivo del Ajuste</label>
-                  <input 
-                    placeholder="Ej: Promo Lanzamiento / Amiga"
-                    className="w-full px-6 py-4 bg-[#F2EFED]/50 border-none rounded-[1.5rem] outline-none text-sm font-medium shadow-inner"
-                    value={discountDesc}
-                    onChange={e => setDiscountDesc(e.target.value)}
-                  />
-                </div>
+                {items.length === 0 && <div className="py-10 text-center text-slate-300 italic">Presupuesto vacío</div>}
               </div>
             </div>
           </div>
 
           <div className="lg:col-span-4 space-y-8">
-            <div className="bg-[#2C3E50] p-10 rounded-[3rem] text-white shadow-2xl shadow-[#2C3E50]/20 sticky top-10 overflow-hidden">
-              <div className="absolute -top-10 -right-10 opacity-10 pointer-events-none">
-                <Leaf size={200} strokeWidth={1} />
-              </div>
-
-              <h3 className="text-xl font-bold brand-font italic mb-10 text-white/90">Resumen {editingBudgetId ? 'de Edición' : 'Financiero'}</h3>
+            <div className="bg-[#2C3E50] p-10 rounded-[3rem] text-white shadow-2xl sticky top-10">
+              <h3 className="text-xl font-bold brand-font italic mb-10 text-white/90">Resumen Financiero</h3>
               
               <div className="space-y-8 relative z-10">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-white/40">
+                <div className="pt-4 pb-2 border-t border-white/10">
+                  <label className="block text-[10px] font-bold text-[#5D7F8E] uppercase tracking-widest mb-3">Margen Utilidad ({utilityPercentage}%)</label>
+                  <input type="range" min="0" max="400" step="5" className="w-full accent-[#5D7F8E]" value={utilityPercentage} onChange={e => setUtilityPercentage(Number(e.target.value))} />
+                </div>
+                
+                <div className="space-y-4">
+                   <div className="flex justify-between items-center text-xs font-bold uppercase text-white/40">
                     <span>Costo Base</span>
                     <span>${rawCostTotal.toLocaleString()}</span>
                   </div>
-                  <div className="pt-4 pb-2 border-t border-white/10">
-                    <label className="block text-[10px] font-bold text-[#5D7F8E] uppercase tracking-widest mb-3">Margen de Utilidad (%)</label>
-                    <div className="flex items-center gap-4">
-                      <input 
-                        type="range"
-                        min="0"
-                        max="400"
-                        step="5"
-                        className="flex-1 accent-[#5D7F8E]"
-                        value={utilityPercentage}
-                        onChange={e => setUtilityPercentage(Number(e.target.value))}
-                      />
-                      <span className="text-2xl font-black min-w-[70px] text-right">{utilityPercentage}%</span>
-                    </div>
-                  </div>
-                  {discountAmount > 0 && (
-                    <div className="flex justify-between items-center text-sm font-bold text-rose-300 py-2">
-                      <span className="opacity-60">Ajuste</span>
-                      <span>-${discountAmount.toLocaleString()}</span>
-                    </div>
-                  )}
+                  {discountAmount > 0 && <div className="flex justify-between items-center text-sm font-bold text-rose-300"><span>Ajuste</span><span>-${discountAmount.toLocaleString()}</span></div>}
                 </div>
+
                 <div className="pt-8 border-t border-white/20 flex flex-col gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#5D7F8E]">Precio Final</span>
                   <span className="text-6xl font-black tracking-tight">${finalTotal.toLocaleString()}</span>
                 </div>
               </div>
               
-              <div className="space-y-4 mt-12 relative z-10">
-                <button 
-                  onClick={handleExportPDF}
-                  disabled={items.length === 0}
-                  className="w-full py-5 bg-[#5D7F8E] text-white rounded-[1.8rem] font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-[#4A6A78] transition-all disabled:opacity-30"
-                >
-                  <Download size={20} />
-                  Exportar PDF
+              <div className="space-y-4 mt-12">
+                <button onClick={() => setIsPreviewOpen(true)} disabled={items.length === 0} className="w-full py-5 bg-[#5D7F8E] text-white rounded-[1.8rem] font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-[#4A6A78] disabled:opacity-30 transition-all">
+                  <Eye size={20} /> Vista Previa
                 </button>
-                <button 
-                  onClick={handleRegisterSale}
-                  disabled={items.length === 0 || isSubmitting}
-                  className="w-full py-5 bg-white text-[#2C3E50] rounded-[1.8rem] font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-[#F2EFED] transition-all disabled:opacity-30"
-                >
-                  <Save size={20} />
-                  {editingBudgetId ? 'Actualizar Datos' : 'Confirmar Venta'}
+                <button onClick={() => handleSaveBudget('pendiente')} disabled={items.length === 0 || isSubmitting} className="w-full py-5 bg-white/10 text-white rounded-[1.8rem] font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-white/20 disabled:opacity-30 transition-all">
+                  <Save size={20} /> Guardar Borrador
                 </button>
-                {editingBudgetId && (
-                   <button 
-                    onClick={resetForm}
-                    className="w-full py-3 text-rose-300 font-bold text-[10px] uppercase tracking-widest hover:text-rose-100 transition-all"
-                  >
-                    Cancelar Edición
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -467,7 +395,7 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
           <table className="w-full text-left">
             <thead>
               <tr className="bg-[#F2EFED]/50 border-b border-[#F2EFED]">
-                <th className="px-8 py-6 text-[10px] font-bold text-[#5D7F8E] uppercase tracking-[0.2em]">Fecha</th>
+                <th className="px-8 py-6 text-[10px] font-bold text-[#5D7F8E] uppercase tracking-[0.2em]">Estado</th>
                 <th className="px-8 py-6 text-[10px] font-bold text-[#5D7F8E] uppercase tracking-[0.2em]">Cliente</th>
                 <th className="px-8 py-6 text-[10px] font-bold text-[#5D7F8E] uppercase tracking-[0.2em]">Total</th>
                 <th className="px-8 py-6 text-[10px] font-bold text-[#5D7F8E] uppercase tracking-[0.2em] text-right">Acciones</th>
@@ -479,31 +407,46 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
                 return (
                   <tr key={budget.id} className="hover:bg-slate-50 transition-all group">
                     <td className="px-8 py-6">
-                      <span className="font-bold text-[#2C3E50]">{budget.date}</span>
+                      <span className={`flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest w-fit ${
+                        budget.status === 'emitido' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                      }`}>
+                        {budget.status === 'emitido' ? <Lock size={12} /> : <Unlock size={12} />}
+                        {budget.status}
+                      </span>
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex flex-col">
                         <span className="font-bold text-[#2C3E50]">{client?.name || 'Venta General'}</span>
-                        {client?.instagram && <span className="text-[10px] text-[#5D7F8E]">@{client.instagram}</span>}
+                        <span className="text-[10px] text-slate-400">{budget.date}</span>
                       </div>
                     </td>
                     <td className="px-8 py-6 font-black text-lg text-[#2C3E50]">${budget.total.toLocaleString()}</td>
                     <td className="px-8 py-6 text-right">
-                      <div className="flex items-center justify-end gap-4">
+                      <div className="flex items-center justify-end gap-3">
+                         <button 
+                          onClick={() => {
+                            // Cargar datos sin editar si está emitido para vista previa rápida
+                            setEditingBudgetId(budget.id);
+                            setItems(budget.items);
+                            setUtilityPercentage(budget.utilityPercentage);
+                            setDiscountAmount(budget.discountAmount);
+                            setDiscountDesc(budget.discountDesc);
+                            setSelectedClient(clients.find(c => c.id === budget.clientId) || null);
+                            setIsPreviewOpen(true);
+                          }}
+                          className="p-3 text-slate-400 hover:text-[#5D7F8E]" title="Ver PDF"
+                        >
+                          <FileText size={18} />
+                        </button>
                         <button 
                           onClick={() => loadBudgetForEdit(budget)}
-                          className="p-3 bg-[#F2EFED] text-[#5D7F8E] rounded-xl hover:bg-[#5D7F8E] hover:text-white transition-all shadow-sm"
+                          disabled={budget.status === 'emitido'}
+                          className={`p-3 rounded-xl transition-all ${budget.status === 'emitido' ? 'text-slate-200 cursor-not-allowed' : 'bg-[#F2EFED] text-[#5D7F8E] hover:bg-[#5D7F8E] hover:text-white'}`}
                           title="Editar"
                         >
                           <Edit3 size={18} />
                         </button>
-                        <button 
-                          onClick={() => handleDeleteBudget(budget.id)}
-                          className="p-3 bg-rose-50 text-rose-300 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm"
-                          title="Eliminar"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        <button onClick={() => handleDeleteBudget(budget.id)} className="p-3 bg-rose-50 text-rose-300 rounded-xl hover:bg-rose-500 hover:text-white transition-all"><Trash2 size={18} /></button>
                       </div>
                     </td>
                   </tr>
@@ -511,12 +454,91 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
               })}
             </tbody>
           </table>
-          {budgets.length === 0 && (
-            <div className="p-20 text-center">
-              <History size={64} className="mx-auto text-[#F2EFED] mb-4" />
-              <p className="text-slate-300 font-bold uppercase tracking-widest text-sm">No hay registros aún</p>
+        </div>
+      )}
+
+      {/* MODAL VISTA PREVIA */}
+      {isPreviewOpen && (
+        <div className="fixed inset-0 bg-[#2C3E50]/80 backdrop-blur-sm z-[200] flex items-center justify-center p-6">
+          <div className="bg-white rounded-[3rem] w-full max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col border border-white shadow-2xl animate-in zoom-in-95">
+            <div className="p-8 border-b flex justify-between items-center bg-slate-50">
+              <h3 className="text-xl font-bold text-[#2C3E50] brand-font italic">Vista Previa del Presupuesto</h3>
+              <button onClick={() => setIsPreviewOpen(false)} className="p-2 hover:bg-white rounded-xl"><X size={24} /></button>
             </div>
-          )}
+            
+            <div className="p-16 space-y-12">
+              {/* Simulación del PDF */}
+              <div className="flex justify-between items-start">
+                {logo ? <img src={logo} className="w-32 h-32 object-contain" /> : <div className="w-20 h-20 bg-slate-100 rounded-2xl" />}
+                <div className="text-right">
+                  <h1 className="text-4xl font-black text-[#2C3E50] tracking-tighter">PRESUPUESTO</h1>
+                  <p className="text-slate-400 font-bold mt-2"># {editingBudgetId?.slice(-6) || 'NUEVO'}</p>
+                  <p className="text-slate-400 font-bold">{new Date().toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-10">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-1">Cliente</p>
+                  <p className="text-xl font-bold text-[#2C3E50]">{selectedClient?.name || 'Venta General'}</p>
+                  <p className="text-sm text-slate-500">{selectedClient?.phone || 'Sin teléfono'}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-1">Estado</p>
+                  <p className="font-bold text-[#5D7F8E] uppercase">{status}</p>
+                </div>
+              </div>
+
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-[#F2EFED] text-[#5D7F8E] text-[10px] font-bold uppercase">
+                    <th className="p-4">Descripción</th>
+                    <th className="p-4 text-center">Cant.</th>
+                    <th className="p-4 text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {items.map((item, i) => (
+                    <tr key={i}>
+                      <td className="p-4 font-bold text-[#2C3E50]">{products.find(p => p.id === item.productId)?.name || 'Pieza'}</td>
+                      <td className="p-4 text-center">{item.quantity}</td>
+                      <td className="p-4 text-right font-bold">${item.subtotal.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="flex flex-col items-end gap-2 border-t pt-8">
+                <div className="flex justify-between w-64 text-slate-400 font-bold text-xs uppercase">
+                  <span>Subtotal</span>
+                  <span>${subtotalWithUtility.toLocaleString()}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between w-64 text-rose-400 font-bold text-xs uppercase">
+                    <span>Descuento</span>
+                    <span>-${discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between w-64 text-3xl font-black text-[#2C3E50] mt-4">
+                  <span>TOTAL</span>
+                  <span>${finalTotal.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-10 border-t flex gap-6 bg-slate-50">
+              <button onClick={handleExportPDF} className="flex-1 py-4 border-2 border-[#5D7F8E] text-[#5D7F8E] rounded-2xl font-bold uppercase text-xs tracking-widest flex items-center justify-center gap-2 hover:bg-white transition-all">
+                <Download size={18} /> Descargar PDF
+              </button>
+              <button 
+                onClick={() => handleSaveBudget('emitido')} 
+                disabled={isSubmitting}
+                className="flex-[2] py-4 bg-[#2C3E50] text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-2 hover:bg-[#1A2632] transition-all"
+              >
+                <Lock size={18} /> Confirmar y Emitir Venta
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

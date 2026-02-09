@@ -24,7 +24,7 @@ export interface Budget {
   discountAmount: number;
   discountDesc: string;
   total: number;
-  status: 'borrador' | 'confirmado';
+  status: 'pendiente' | 'emitido';
 }
 
 export interface Product {
