@@ -1,7 +1,9 @@
 
 import React, { useState } from 'react';
-import { Product, Material, BudgetItem } from '../types';
-import { Search, Plus, Trash2, Edit3, Tag, Calendar, X, BookmarkPlus } from 'lucide-react';
+import { Product, Material } from '../types';
+// Import Leaf icon to fix "Cannot find name 'Leaf'" error
+import { Search, Plus, Trash2, Edit3, Tag, Calendar, X, BookmarkPlus, Camera, Image as ImageIcon, Leaf } from 'lucide-react';
+import { db, getSupabase } from '../lib/supabase';
 
 interface Props {
   products: Product[];
@@ -13,20 +15,26 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Form State
   const [formData, setFormData] = useState<Omit<Product, 'id' | 'dateCreated'>>({
     name: '',
     description: '',
     items: [],
     totalCost: 0,
     suggestedPrice: 0,
+    imageUrl: ''
   });
 
-  const handleDelete = (id: string) => {
-    if (confirm('¿Deseas eliminar este diseño del catálogo?')) {
-      setProducts(prev => prev.filter(p => p.id !== id));
-      if (editingId === id) closeModal();
+  const handleDelete = async (id: string) => {
+    if (confirm('¿Deseas eliminar este diseño?')) {
+      try {
+        if (getSupabase()) await db.remove('products', id);
+        setProducts(prev => prev.filter(p => p.id !== id));
+        if (editingId === id) closeModal();
+      } catch (err) {
+        alert("Error al eliminar.");
+      }
     }
   };
 
@@ -39,6 +47,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
         items: [...product.items],
         totalCost: product.totalCost,
         suggestedPrice: product.suggestedPrice,
+        imageUrl: product.imageUrl || ''
       });
     } else {
       setEditingId(null);
@@ -48,6 +57,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
         items: [],
         totalCost: 0,
         suggestedPrice: 0,
+        imageUrl: ''
       });
     }
     setIsModalOpen(true);
@@ -58,20 +68,33 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     setEditingId(null);
   };
 
-  const calculateTotals = (items: BudgetItem[]) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, imageUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Fixed: Use Product['items'] type instead of BudgetItem[]
+  const calculateTotals = (items: Product['items']) => {
     const cost = items.reduce((acc, item) => acc + item.subtotal, 0);
     return { cost, suggested: cost * 2 };
   };
 
   const addItem = () => {
-    if (materials.length === 0) return alert('Primero debes cargar materiales en el inventario.');
+    if (materials.length === 0) return alert('Carga materiales primero.');
     const firstMat = materials[0];
     const newItems = [...formData.items, { materialId: firstMat.id, quantity: 1, subtotal: firstMat.costPerUnit }];
     const totals = calculateTotals(newItems);
     setFormData({ ...formData, items: newItems, totalCost: totals.cost, suggestedPrice: totals.suggested });
   };
 
-  const updateItem = (index: number, field: keyof BudgetItem, value: any) => {
+  // Fixed: Corrected parameter type to match Product items keys instead of BudgetItem
+  const updateItem = (index: number, field: keyof (Product['items'][0]), value: any) => {
     const newItems = [...formData.items];
     const item = newItems[index];
 
@@ -95,252 +118,293 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     setFormData({ ...formData, items: newItems, totalCost: totals.cost, suggestedPrice: totals.suggested });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.items.length === 0) return alert('Debes agregar al menos un material al diseño.');
+    if (formData.items.length === 0) return alert('Agrega materiales.');
+    
+    setIsSaving(true);
+    const id = editingId || Date.now().toString();
+    const productData: Product = {
+      ...formData,
+      id,
+      dateCreated: editingId ? (products.find(p => p.id === editingId)?.dateCreated || '') : new Date().toISOString().split('T')[0]
+    };
 
-    if (editingId) {
-      setProducts(prev => prev.map(p => 
-        p.id === editingId ? { ...p, ...formData } : p
-      ));
-    } else {
-      const newProduct: Product = {
-        ...formData,
-        id: Date.now().toString(),
-        dateCreated: new Date().toISOString().split('T')[0],
-      };
-      setProducts(prev => [newProduct, ...prev]);
+    try {
+      if (getSupabase()) await db.upsert('products', productData);
+      if (editingId) {
+        setProducts(prev => prev.map(p => p.id === editingId ? productData : p));
+      } else {
+        setProducts(prev => [productData, ...prev]);
+      }
+      closeModal();
+    } catch (err) {
+      alert("Error en Supabase.");
+    } finally {
+      setIsSaving(false);
     }
-    closeModal();
   };
 
   const filtered = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.description.toLowerCase().includes(searchTerm.toLowerCase())
+    p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-10 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold brand-font text-slate-900">Catálogo de Diseños</h2>
-          <p className="text-slate-500 text-sm">Tus creaciones guardadas con sus costos y materiales.</p>
+          <h2 className="text-5xl font-bold brand-font text-[#2C3E50] italic leading-tight">Catálogo Exclusivo</h2>
+          <p className="text-[#5D7F8E] font-medium tracking-[0.1em] uppercase text-xs mt-2">Nuestras Creaciones Jana Diseños</p>
         </div>
-        <div className="flex gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <div className="flex gap-4">
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#5D7F8E] transition-colors" size={18} />
             <input 
               type="text" 
-              placeholder="Buscar diseños..."
-              className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 text-sm w-full md:w-64 outline-none"
+              placeholder="Buscar pieza..."
+              className="pl-12 pr-6 py-3 bg-white border-none rounded-[1.2rem] focus:ring-2 focus:ring-[#5D7F8E] text-sm w-full md:w-64 outline-none transition-all shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <button 
             onClick={() => openModal()}
-            className="flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-rose-200 font-medium text-sm"
+            className="flex items-center justify-center gap-2 bg-[#5D7F8E] hover:bg-[#4A6A78] text-white px-8 py-3 rounded-[1.2rem] transition-all shadow-xl shadow-[#5D7F8E]/20 font-bold text-sm tracking-wide"
           >
             <Plus size={18} />
-            Nuevo Diseño
+            Nueva Creación
           </button>
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-slate-200">
-          <div className="w-16 h-16 bg-rose-50 text-rose-300 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Tag size={32} />
+        <div className="bg-white rounded-[3rem] p-24 text-center border border-white shadow-xl shadow-slate-200/50">
+          <div className="w-24 h-24 bg-[#F2EFED] text-[#5D7F8E] rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+            <Tag size={48} strokeWidth={1.5} />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900">No hay diseños guardados</h3>
-          <p className="text-slate-500 max-w-xs mx-auto mt-2">
-            Crea un nuevo diseño aquí o guárdalo desde el apartado de <strong>Presupuestos</strong>.
+          <h3 className="text-2xl font-bold text-[#2C3E50]">Comienza tu colección</h3>
+          <p className="text-slate-400 max-w-sm mx-auto mt-3">
+            Crea tu primer diseño para tener un registro visual y de costos de tus joyas.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {filtered.map(product => (
-            <div key={product.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all overflow-hidden group flex flex-col">
-              <div className="p-6 flex-1">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-900 group-hover:text-rose-600 transition-colors">{product.name}</h3>
-                    <p className="text-sm text-slate-400 flex items-center gap-1 mt-1">
-                      <Calendar size={12} />
-                      {product.dateCreated}
-                    </p>
+            <div key={product.id} className="bg-white rounded-[2.5rem] border border-white shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden group flex flex-col h-full">
+              <div className="aspect-[5/4] bg-[#F2EFED] relative overflow-hidden">
+                {product.imageUrl ? (
+                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 gap-3">
+                    <ImageIcon size={56} strokeWidth={1} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-50">Sin Imagen</span>
                   </div>
-                  <button 
+                )}
+                <div className="absolute top-6 right-6 flex gap-2">
+                   <button 
                     onClick={() => handleDelete(product.id)}
-                    className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
+                    className="w-10 h-10 bg-white/80 backdrop-blur-md text-slate-400 hover:text-rose-500 rounded-xl transition-all shadow-lg flex items-center justify-center"
                   >
                     <Trash2 size={18} />
                   </button>
                 </div>
-
-                <p className="text-sm text-slate-600 mb-6 line-clamp-2">{product.description}</p>
-
-                <div className="space-y-3 mb-6">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Materiales usados</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {product.items.map((item, idx) => {
-                      const mat = materials.find(m => m.id === item.materialId);
-                      return (
-                        <span key={idx} className="px-2 py-1 bg-slate-50 text-slate-600 text-[10px] font-medium rounded-lg border border-slate-100">
-                          {item.quantity} {mat?.unit} {mat?.name}
-                        </span>
-                      );
-                    })}
+              </div>
+              
+              <div className="p-8 flex-1 flex flex-col">
+                <div className="mb-6">
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="text-2xl font-bold text-[#2C3E50] group-hover:text-[#5D7F8E] transition-colors leading-tight line-clamp-1">{product.name}</h3>
                   </div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar size={12} className="text-[#5D7F8E]" />
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{product.dateCreated}</span>
+                  </div>
+                  <p className="text-sm text-slate-500 line-clamp-2 italic leading-relaxed">{product.description || 'Una pieza única de Jana Diseños.'}</p>
                 </div>
 
-                <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
-                  <div className="flex-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Costo Base</p>
-                    <p className="text-lg font-bold text-slate-700">${product.totalCost}</p>
+                <div className="mt-auto pt-6 border-t border-[#F2EFED] space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[9px] font-bold text-[#5D7F8E] uppercase tracking-[0.2em] mb-1">Costo Base</p>
+                      <p className="text-xl font-bold text-[#2C3E50]">${product.totalCost}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold text-[#5D7F8E] uppercase tracking-[0.2em] mb-1">Sugerido</p>
+                      <p className="text-2xl font-bold text-[#5D7F8E]">${product.suggestedPrice}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 text-right">
-                    <p className="text-[10px] font-bold text-rose-400 uppercase">PVP Sugerido</p>
-                    <p className="text-xl font-bold text-rose-600">${product.suggestedPrice}</p>
-                  </div>
+                  
+                  <button 
+                    onClick={() => openModal(product)}
+                    className="w-full py-4 bg-[#F2EFED] text-[#2C3E50] font-bold text-xs uppercase tracking-widest hover:bg-[#5D7F8E] hover:text-white transition-all rounded-2xl flex items-center justify-center gap-3 shadow-inner"
+                  >
+                    <Edit3 size={16} />
+                    Refinar Diseño
+                  </button>
                 </div>
               </div>
-              <button 
-                onClick={() => openModal(product)}
-                className="w-full py-3 bg-slate-50 text-slate-500 font-semibold text-sm hover:bg-rose-50 hover:text-rose-600 transition-colors flex items-center justify-center gap-2 border-t border-slate-100"
-              >
-                <Edit3 size={16} />
-                Editar Diseño
-              </button>
             </div>
           ))}
         </div>
       )}
 
-      {/* Create/Edit Modal */}
+      {/* Modal Reestilizado */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-xl font-bold brand-font text-slate-900">{editingId ? 'Editar Diseño' : 'Nuevo Diseño'}</h3>
-              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600">
-                <X size={24} />
+        <div className="fixed inset-0 bg-[#2C3E50]/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
+          <div className="bg-[#F2EFED] rounded-[3rem] w-full max-w-5xl max-h-[92vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 border border-white">
+            <div className="p-10 flex items-center justify-between bg-white border-b border-[#F2EFED]">
+              <div>
+                <h3 className="text-3xl font-bold brand-font text-[#2C3E50] italic">{editingId ? 'Refinar Diseño' : 'Nueva Pieza Jana'}</h3>
+                <p className="text-sm text-[#5D7F8E] font-medium mt-1">Detalles técnicos y visuales de tu obra.</p>
+              </div>
+              <button onClick={closeModal} className="w-14 h-14 flex items-center justify-center text-slate-300 hover:text-[#2C3E50] bg-[#F2EFED] rounded-2xl transition-all active:scale-90">
+                <X size={28} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Nombre del Diseño</label>
-                  <input 
-                    required
-                    placeholder="Ej: Collar de Gala Azul"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
-                    value={formData.name}
-                    onChange={e => setFormData({...formData, name: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Descripción Corta</label>
-                  <input 
-                    placeholder="Ej: Elegante, 45cm, perlas de cristal"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
-                    value={formData.description}
-                    onChange={e => setFormData({...formData, description: e.target.value})}
-                  />
-                </div>
-              </div>
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-10 custom-scrollbar space-y-10">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                <div className="lg:col-span-5 space-y-8">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-[#2C3E50]/40 uppercase tracking-[0.2em] ml-2">Vista del Producto</label>
+                    <div className="relative aspect-square bg-white rounded-[2.5rem] border-2 border-dashed border-[#5D7F8E]/20 overflow-hidden group/img shadow-inner">
+                      {formData.imageUrl ? (
+                        <>
+                          <img src={formData.imageUrl} className="w-full h-full object-cover" />
+                          <button 
+                            type="button"
+                            onClick={() => setFormData({...formData, imageUrl: ''})}
+                            className="absolute top-6 right-6 w-12 h-12 bg-white/90 backdrop-blur shadow-xl rounded-2xl flex items-center justify-center text-rose-500 opacity-0 group-hover/img:opacity-100 transition-all active:scale-90"
+                          >
+                            <Trash2 size={24} />
+                          </button>
+                        </>
+                      ) : (
+                        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition-all gap-4 p-10 text-center">
+                          <div className="w-20 h-20 bg-[#F2EFED] text-[#5D7F8E] rounded-3xl flex items-center justify-center shadow-lg">
+                            <Camera size={40} strokeWidth={1.5} />
+                          </div>
+                          <div>
+                            <p className="text-lg font-bold text-[#2C3E50]">Capturar Obra</p>
+                            <p className="text-xs text-slate-400 mt-1">JPEG o PNG • Máx 5MB</p>
+                          </div>
+                          <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                        </label>
+                      )}
+                    </div>
+                  </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Materiales del Diseño</h4>
-                  <button 
-                    type="button"
-                    onClick={addItem}
-                    className="text-rose-600 hover:text-rose-700 text-xs font-bold flex items-center gap-1"
-                  >
-                    <Plus size={14} />
-                    Agregar Material
-                  </button>
-                </div>
-                
-                <div className="space-y-3 border-t border-slate-50 pt-3">
-                  {formData.items.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-3 bg-slate-50/50 p-2 rounded-xl animate-in slide-in-from-left-2 duration-200">
-                      <select 
-                        className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg outline-none text-sm"
-                        value={item.materialId}
-                        onChange={e => updateItem(idx, 'materialId', e.target.value)}
-                      >
-                        {materials.map(m => (
-                          <option key={m.id} value={m.id}>{m.name} (${m.costPerUnit})</option>
-                        ))}
-                      </select>
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#2C3E50]/40 uppercase tracking-[0.2em] mb-2 ml-2">Nombre de la Pieza</label>
                       <input 
-                        type="number"
-                        step="0.1"
-                        className="w-20 px-3 py-2 bg-white border border-slate-200 rounded-lg text-center outline-none text-sm"
-                        value={item.quantity}
-                        onChange={e => updateItem(idx, 'quantity', e.target.value)}
+                        required
+                        className="w-full px-6 py-4 bg-white border border-transparent rounded-[1.5rem] focus:ring-2 focus:ring-[#5D7F8E] outline-none transition-all font-semibold shadow-sm"
+                        value={formData.name}
+                        onChange={e => setFormData({...formData, name: e.target.value})}
                       />
-                      <span className="w-20 text-right font-semibold text-slate-700 text-sm">${item.subtotal}</span>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#2C3E50]/40 uppercase tracking-[0.2em] mb-2 ml-2">Historia / Descripción</label>
+                      <textarea 
+                        rows={4}
+                        className="w-full px-6 py-4 bg-white border border-transparent rounded-[1.5rem] focus:ring-2 focus:ring-[#5D7F8E] outline-none transition-all resize-none text-sm leading-relaxed shadow-sm"
+                        value={formData.description}
+                        onChange={e => setFormData({...formData, description: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-7 space-y-10">
+                  <div className="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-[#2C3E50]/5 space-y-6 border border-white">
+                    <div className="flex items-center justify-between border-b border-[#F2EFED] pb-6">
+                      <h4 className="text-xs font-bold text-[#2C3E50] uppercase tracking-[0.2em]">Insumos y Detalles</h4>
                       <button 
                         type="button"
-                        onClick={() => removeItem(idx)} 
-                        className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
+                        onClick={addItem}
+                        className="text-[#5D7F8E] hover:text-[#4A6A78] text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 bg-[#F2EFED] px-4 py-2 rounded-xl transition-all active:scale-95"
                       >
-                        <Trash2 size={16} />
+                        <Plus size={16} />
+                        Añadir Material
                       </button>
                     </div>
-                  ))}
-                  {formData.items.length === 0 && (
-                    <p className="text-center py-6 text-sm text-slate-400 italic">No has agregado materiales a este diseño.</p>
-                  )}
-                </div>
-              </div>
+                    
+                    <div className="space-y-4 custom-scrollbar max-h-[350px] overflow-y-auto pr-3">
+                      {formData.items.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-4 bg-[#F2EFED]/50 p-4 rounded-2xl border border-white transition-all hover:bg-[#F2EFED]">
+                          <select 
+                            className="flex-1 px-4 py-3 bg-white border-none rounded-xl outline-none text-xs font-bold text-[#2C3E50]"
+                            value={item.materialId}
+                            onChange={e => updateItem(idx, 'materialId', e.target.value)}
+                          >
+                            {materials.map(m => (
+                              <option key={m.id} value={m.id}>{m.name} (${m.costPerUnit})</option>
+                            ))}
+                          </select>
+                          <input 
+                            type="number"
+                            step="0.1"
+                            className="w-20 px-4 py-3 bg-white border-none rounded-xl text-center outline-none text-xs font-bold"
+                            value={item.quantity}
+                            onChange={e => updateItem(idx, 'quantity', e.target.value)}
+                          />
+                          <span className="w-24 text-right font-bold text-[#2C3E50] text-sm">${item.subtotal}</span>
+                          <button 
+                            type="button"
+                            onClick={() => removeItem(idx)} 
+                            className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-rose-500 transition-colors"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-              <div className="bg-rose-50 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="text-center md:text-left">
-                  <p className="text-xs text-rose-400 uppercase font-bold tracking-widest">Costo de Producción</p>
-                  <p className="text-3xl font-bold text-rose-700">${formData.totalCost}</p>
-                </div>
-                <div className="text-center md:text-right">
-                  <label className="block text-xs text-indigo-400 uppercase font-bold tracking-widest mb-1">Precio de Venta Sugerido</label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-indigo-700">$</span>
-                    <input 
-                      type="number"
-                      className="w-32 bg-white border border-indigo-100 rounded-lg px-3 py-1 text-xl font-bold text-indigo-700 text-right outline-none focus:ring-2 focus:ring-indigo-500"
-                      value={formData.suggestedPrice}
-                      onChange={e => setFormData({...formData, suggestedPrice: Number(e.target.value)})}
-                    />
+                  <div className="bg-[#5D7F8E] p-10 rounded-[3rem] flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl shadow-[#5D7F8E]/30 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
+                      <Leaf size={180} strokeWidth={1} />
+                    </div>
+                    <div className="text-center md:text-left relative z-10">
+                      <p className="text-[10px] text-white/50 uppercase font-bold tracking-[0.3em] mb-2">Inversión Base</p>
+                      <p className="text-5xl font-bold text-white">${formData.totalCost}</p>
+                    </div>
+                    <div className="text-center md:text-right relative z-10">
+                      <label className="block text-[10px] text-white/50 uppercase font-bold tracking-[0.3em] mb-3">Valor Sugerido Mercado</label>
+                      <div className="flex items-center gap-4 justify-center md:justify-end">
+                        <span className="text-3xl font-light text-white/30">$</span>
+                        <input 
+                          type="number"
+                          className="w-40 bg-white/10 border-2 border-white/20 rounded-[1.5rem] px-6 py-3 text-3xl font-bold text-white text-right outline-none focus:bg-white/20 transition-all"
+                          value={formData.suggestedPrice}
+                          onChange={e => setFormData({...formData, suggestedPrice: Number(e.target.value)})}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-4 flex gap-3">
+              <div className="pt-10 flex gap-6 border-t border-white/50">
                 <button 
                   type="button" 
                   onClick={closeModal} 
-                  className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold transition-colors"
+                  className="flex-1 px-8 py-5 bg-white text-[#2C3E50]/40 rounded-[1.8rem] font-bold uppercase text-xs tracking-widest hover:bg-slate-50 transition-all"
                 >
-                  Cancelar
+                  Regresar
                 </button>
-                {editingId && (
-                  <button 
-                    type="button" 
-                    onClick={() => handleDelete(editingId)} 
-                    className="px-4 py-3 bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
-                  >
-                    <Trash2 size={20} />
-                  </button>
-                )}
                 <button 
                   type="submit" 
-                  className="flex-[2] px-4 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold shadow-lg shadow-rose-200 transition-all flex items-center justify-center gap-2"
+                  disabled={isSaving}
+                  className="flex-[2] px-8 py-5 bg-[#2C3E50] hover:bg-[#1A2632] text-white rounded-[1.8rem] font-bold uppercase text-xs tracking-[0.2em] shadow-2xl shadow-[#2C3E50]/20 transition-all flex items-center justify-center gap-4 active:scale-95 disabled:opacity-50"
                 >
-                  <BookmarkPlus size={20} />
-                  {editingId ? 'Actualizar Diseño' : 'Guardar en Catálogo'}
+                  {isSaving ? (
+                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <BookmarkPlus size={22} />
+                  )}
+                  {editingId ? 'Preservar Cambios' : 'Lanzar al Catálogo'}
                 </button>
               </div>
             </form>

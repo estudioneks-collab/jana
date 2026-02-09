@@ -28,8 +28,8 @@ const Inventory: React.FC<Props> = ({ materials, setMaterials }) => {
       try {
         if (getSupabase()) await db.remove('materials', id);
         setMaterials(prev => prev.filter(m => m.id !== id));
-      } catch (err) {
-        alert("Error al eliminar material");
+      } catch (err: any) {
+        alert("Error al eliminar material: " + (err.message || "Error desconocido"));
       }
     }
   };
@@ -51,8 +51,9 @@ const Inventory: React.FC<Props> = ({ materials, setMaterials }) => {
         setMaterials(prev => [...prev, materialData]);
       }
       closeModal();
-    } catch (err) {
-      alert("Error al guardar en base de datos");
+    } catch (err: any) {
+      console.error("Error completo de Supabase:", err);
+      alert("Error al guardar en base de datos: " + (err.message || "Verifica las columnas en Supabase"));
     } finally {
       setIsSubmitting(false);
     }

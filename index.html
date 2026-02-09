@@ -6,14 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Jana Diseños - Gestión</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --brand-teal: #5D7F8E;
+        --brand-navy: #2C3E50;
+        --brand-beige: #F2EFED;
+      }
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #fcfaf9;
+        background-color: var(--brand-beige);
+        color: var(--brand-navy);
       }
       .brand-font {
         font-family: 'Playfair Display', serif;
+        font-style: italic;
       }
       .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
@@ -22,8 +29,19 @@
         background: transparent;
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #e2e8f0;
+        background: #d1d5db;
         border-radius: 10px;
+      }
+      .bg-brand-teal { background-color: var(--brand-teal); }
+      .text-brand-teal { color: var(--brand-teal); }
+      .bg-brand-navy { background-color: var(--brand-navy); }
+      .text-brand-navy { color: var(--brand-navy); }
+      .bg-brand-beige { background-color: var(--brand-beige); }
+      
+      /* Estilos personalizados para inputs */
+      input:focus, select:focus, textarea:focus {
+        border-color: var(--brand-teal) !important;
+        ring: 2px solid var(--brand-teal) !important;
       }
     </style>
   <script type="importmap">

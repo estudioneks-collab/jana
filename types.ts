@@ -9,29 +9,31 @@ export interface Material {
 }
 
 export interface BudgetItem {
-  materialId: string;
+  productId: string;
   quantity: number;
+  unitCost: number; // Costo base del producto en el momento del presupuesto
   subtotal: number;
-}
-
-export interface Budget {
-  id: string;
-  clientName: string;
-  date: string;
-  items: BudgetItem[];
-  discountAmount: number;
-  discountDescription: string;
-  total: number;
 }
 
 export interface Product {
   id: string;
   name: string;
   description: string;
-  items: BudgetItem[];
+  items: { materialId: string; quantity: number; subtotal: number }[];
   totalCost: number;
   suggestedPrice: number;
+  imageUrl?: string;
   dateCreated: string;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  instagram?: string;
+  address?: string;
+  dateAdded: string;
 }
 
 export interface Transaction {
@@ -41,11 +43,4 @@ export interface Transaction {
   category: string;
   description: string;
   amount: number;
-}
-
-export interface MonthlyStats {
-  month: string;
-  ingresos: number;
-  egresos: number;
-  balance: number;
 }
