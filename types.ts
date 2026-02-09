@@ -11,8 +11,20 @@ export interface Material {
 export interface BudgetItem {
   productId: string;
   quantity: number;
-  unitCost: number; // Costo base del producto en el momento del presupuesto
+  unitCost: number; 
   subtotal: number;
+}
+
+export interface Budget {
+  id: string;
+  date: string;
+  clientId: string | null;
+  items: BudgetItem[];
+  utilityPercentage: number;
+  discountAmount: number;
+  discountDesc: string;
+  total: number;
+  status: 'borrador' | 'confirmado';
 }
 
 export interface Product {

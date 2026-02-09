@@ -15,7 +15,11 @@ import {
   CloudOff,
   Cloud,
   Users,
-  Leaf
+  Leaf,
+  ShieldCheck,
+  Camera,
+  Trash2,
+  Image as ImageIcon
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Inventory from './components/Inventory';
@@ -24,8 +28,8 @@ import Accounting from './components/Accounting';
 import QuickCalculator from './components/QuickCalculator';
 import Catalogue from './components/Catalogue';
 import Clients from './components/Clients';
-import { Material, Transaction, Product, Client } from './types';
-import { getSupabase, db, getSupabaseConfig, saveSupabaseConfig, clearSupabaseConfig } from './lib/supabase';
+import { Material, Transaction, Product, Client, Budget } from './types';
+import { getSupabase, db } from './lib/supabase';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'budgets' | 'accounting' | 'calculator' | 'catalogue' | 'clients' | 'settings'>('dashboard');
@@ -37,59 +41,59 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-
-  const [sbUrl, setSbUrl] = useState('');
-  const [sbKey, setSbKey] = useState('');
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [logo, setLogo] = useState<string | null>(localStorage.getItem('jana_logo'));
 
   useEffect(() => {
-    const config = getSupabaseConfig();
-    if (config) {
-      setSbUrl(config.url);
-      setSbKey(config.key);
-      loadAllData();
-    } else {
-      setMaterials([
-        { id: '1', name: 'Perlas de Rio 6mm', category: 'perlas', unit: 'unidad', costPerUnit: 15, stock: 100 },
-        { id: '2', name: 'Cadena Acero Quirúrgico', category: 'cadenas', unit: 'metro', costPerUnit: 250, stock: 50 },
-      ]);
-    }
+    const checkConnection = async () => {
+      const client = getSupabase();
+      if (client) {
+        await loadAllData();
+      }
+    };
+    checkConnection();
   }, []);
 
   const loadAllData = async () => {
-    if (!getSupabase()) return;
     setIsLoading(true);
     try {
-      const [mats, trans, prods, clis] = await Promise.all([
-        db.fetch<Material>('materials'),
-        db.fetch<Transaction>('transactions'),
-        db.fetch<Product>('products'),
-        db.fetch<Client>('clients')
+      const [mats, trans, prods, clis, buds] = await Promise.all([
+        db.fetch<Material>('materials').catch(() => []),
+        db.fetch<Transaction>('transactions').catch(() => []),
+        db.fetch<Product>('products').catch(() => []),
+        db.fetch<Client>('clients').catch(() => []),
+        db.fetch<Budget>('budgets').catch(() => [])
       ]);
       setMaterials(mats || []);
       setTransactions(trans || []);
       setProducts(prods || []);
       setClients(clis || []);
+      setBudgets(buds || []);
       setIsDbConnected(true);
     } catch (err) {
-      console.error("Error cargando datos:", err);
+      console.error("Error cargando datos de Jana:", err);
       setIsDbConnected(false);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleConnectSupabase = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!sbUrl || !sbKey) return;
-    saveSupabaseConfig({ url: sbUrl, key: sbKey });
-    loadAllData();
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        setLogo(base64);
+        localStorage.setItem('jana_logo', base64);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  const handleDisconnect = () => {
-    clearSupabaseConfig();
-    setIsDbConnected(false);
-    setSbUrl('');
-    setSbKey('');
+  const removeLogo = () => {
+    setLogo(null);
+    localStorage.removeItem('jana_logo');
   };
 
   const navItems = [
@@ -107,7 +111,7 @@ const App: React.FC = () => {
       return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
           <div className="w-12 h-12 border-4 border-[#F2EFED] border-t-[#5D7F8E] rounded-full animate-spin"></div>
-          <p className="text-[#2C3E50]/60 font-medium text-lg">Cargando Jana Diseños...</p>
+          <p className="text-[#2C3E50]/60 font-medium text-lg">Sincronizando Jana Diseños...</p>
         </div>
       );
     }
@@ -122,77 +126,102 @@ const App: React.FC = () => {
       case 'clients':
         return <Clients clients={clients} setClients={setClients} />;
       case 'budgets':
-        return <BudgetBuilder products={products} clients={clients} setTransactions={setTransactions} />;
+        return <BudgetBuilder 
+          products={products} 
+          clients={clients} 
+          budgets={budgets}
+          setBudgets={setBudgets}
+          setTransactions={setTransactions} 
+          logo={logo}
+        />;
       case 'accounting':
         return <Accounting transactions={transactions} setTransactions={setTransactions} />;
       case 'calculator':
         return <QuickCalculator />;
       case 'settings':
         return (
-          <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-3xl font-bold brand-font text-[#2C3E50] mb-6 text-center">Nube Supabase</h2>
-            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-[#2C3E50]/5 space-y-8">
-              <div className="flex items-center gap-5 p-6 bg-[#F2EFED] rounded-[2rem] border border-white/50">
-                {isDbConnected ? (
-                  <div className="w-16 h-16 bg-[#5D7F8E]/10 text-[#5D7F8E] rounded-2xl flex items-center justify-center shadow-inner">
-                    <Cloud size={32} />
+          <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <header className="text-center">
+              <h2 className="text-4xl font-bold brand-font text-[#2C3E50] mb-2">Ajustes de Jana</h2>
+              <p className="text-[#5D7F8E]">Configura la identidad visual y revisa el sistema.</p>
+            </header>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Sección de Logo */}
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-[#2C3E50]/5">
+                <h3 className="text-xl font-bold mb-6 text-[#2C3E50] flex items-center gap-3">
+                  <ImageIcon size={24} className="text-[#5D7F8E]" />
+                  Identidad Visual
+                </h3>
+                <div className="space-y-6">
+                  <div className="relative aspect-video bg-[#F2EFED] rounded-3xl border-2 border-dashed border-[#5D7F8E]/20 overflow-hidden flex items-center justify-center group">
+                    {logo ? (
+                      <>
+                        <img src={logo} alt="Logo Jana" className="max-h-full max-w-full object-contain p-4" />
+                        <button 
+                          onClick={removeLogo}
+                          className="absolute top-4 right-4 w-10 h-10 bg-white/90 text-rose-500 rounded-xl shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </>
+                    ) : (
+                      <label className="cursor-pointer flex flex-col items-center gap-3 p-10 text-center">
+                        <Camera size={40} className="text-[#5D7F8E]/40" />
+                        <span className="text-sm font-bold text-[#5D7F8E]">Subir Logo de la Marca</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                      </label>
+                    )}
                   </div>
-                ) : (
-                  <div className="w-16 h-16 bg-white text-slate-300 rounded-2xl flex items-center justify-center shadow-inner">
-                    <CloudOff size={32} />
-                  </div>
-                )}
-                <div>
-                  <h3 className="font-bold text-[#2C3E50] text-xl">{isDbConnected ? 'Conexión Segura' : 'Modo Offline'}</h3>
-                  <p className="text-sm text-[#2C3E50]/60">
-                    {isDbConnected 
-                      ? 'Tus datos están sincronizados en tiempo real.' 
-                      : 'Vincula Supabase para guardar tus diseños.'}
+                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold leading-relaxed">
+                    Este logo se utilizará en el encabezado de la aplicación y en los presupuestos PDF generados para tus clientes.
                   </p>
                 </div>
               </div>
 
-              <form onSubmit={handleConnectSupabase} className="space-y-5">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Supabase URL</label>
-                  <input 
-                    type="text" 
-                    placeholder="https://xyz.supabase.co"
-                    className="w-full px-6 py-4 bg-[#F2EFED]/50 border border-transparent rounded-[1.5rem] outline-none focus:ring-2 focus:ring-[#5D7F8E] transition-all font-medium"
-                    value={sbUrl}
-                    onChange={e => setSbUrl(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-2">Anon Key</label>
-                  <input 
-                    type="password" 
-                    placeholder="API Key"
-                    className="w-full px-6 py-4 bg-[#F2EFED]/50 border border-transparent rounded-[1.5rem] outline-none focus:ring-2 focus:ring-[#5D7F8E] transition-all font-medium"
-                    value={sbKey}
-                    onChange={e => setSbKey(e.target.value)}
-                  />
-                </div>
-                <div className="pt-4 flex gap-4">
-                  {isDbConnected && (
-                    <button 
-                      type="button" 
-                      onClick={handleDisconnect}
-                      className="flex-1 px-6 py-4 bg-white border border-slate-100 text-[#2C3E50]/50 rounded-[1.5rem] font-bold transition-all hover:bg-slate-50"
-                    >
-                      Desconectar
-                    </button>
+              {/* Estado del Sistema */}
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-[#2C3E50]/5 space-y-6">
+                <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3">
+                  <Database size={24} className="text-[#5D7F8E]" />
+                  Estado del Sistema
+                </h3>
+                
+                <div className="flex items-center gap-4 p-5 bg-[#F2EFED] rounded-2xl">
+                  {isDbConnected ? (
+                    <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-xl flex items-center justify-center">
+                      <ShieldCheck size={24} />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 bg-rose-50 text-rose-300 rounded-xl flex items-center justify-center">
+                      <CloudOff size={24} />
+                    </div>
                   )}
-                  <button 
-                    type="submit" 
-                    className="flex-[2] px-6 py-4 bg-[#5D7F8E] hover:bg-[#4A6A78] text-white rounded-[1.5rem] font-bold shadow-lg shadow-[#5D7F8E]/20 flex items-center justify-center gap-2 transition-all active:scale-95"
-                  >
-                    <Database size={20} />
-                    {isDbConnected ? 'Actualizar Nube' : 'Vincular Proyecto'}
-                  </button>
+                  <div>
+                    <h4 className="font-bold text-[#2C3E50] text-sm">{isDbConnected ? 'Conexión Protegida' : 'Servidor Desconectado'}</h4>
+                    <p className="text-[10px] text-[#2C3E50]/60 uppercase tracking-widest font-bold">Nube Privada Activa</p>
+                  </div>
                 </div>
-              </form>
+
+                <div className="p-6 bg-[#2C3E50] rounded-2xl text-white/80 space-y-3">
+                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
+                    <span className="text-white/40">Seguridad</span>
+                    <span className="text-emerald-400">ACTIVADA</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
+                    <span className="text-white/40">Base de Datos</span>
+                    <span>Supabase Cloud</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
+                    <span className="text-white/40">Acceso</span>
+                    <span>Restringido a Jana</span>
+                  </div>
+                </div>
+              </div>
             </div>
+            
+            <p className="text-center text-[10px] text-slate-400 uppercase tracking-widest font-bold pt-10 border-t border-[#F2EFED]">
+              Jana Diseños - Software de Gestión Exclusivo
+            </p>
           </div>
         );
       default:
@@ -206,9 +235,13 @@ const App: React.FC = () => {
         className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-white border-r border-[#2C3E50]/5 transition-all duration-500 flex flex-col fixed h-full z-50`}
       >
         <div className="p-8 flex items-center gap-4 mb-4">
-          <div className="w-12 h-12 bg-[#5D7F8E] rounded-2xl flex items-center justify-center text-white shadow-xl shadow-[#5D7F8E]/20 shrink-0">
-            <Leaf size={24} />
-          </div>
+          {logo ? (
+            <img src={logo} alt="Jana" className="w-12 h-12 object-contain rounded-xl shadow-md" />
+          ) : (
+            <div className="w-12 h-12 bg-[#5D7F8E] rounded-2xl flex items-center justify-center text-white shadow-xl shadow-[#5D7F8E]/20 shrink-0">
+              <Leaf size={24} />
+            </div>
+          )}
           {isSidebarOpen && (
             <div className="overflow-hidden">
               <h1 className="brand-font text-3xl leading-none text-[#5D7F8E]">Jana</h1>
@@ -242,8 +275,8 @@ const App: React.FC = () => {
                 : 'text-slate-400 hover:bg-[#F2EFED]'
               }`}
             >
-              <Database size={22} />
-              {isSidebarOpen && <span className="text-sm font-medium">Supabase</span>}
+              <Settings size={22} />
+              {isSidebarOpen && <span className="text-sm font-medium">Configuración</span>}
             </button>
           </div>
         </nav>

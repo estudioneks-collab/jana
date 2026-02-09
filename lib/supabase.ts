@@ -1,6 +1,10 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+// CONFIGURACIÓN FIJA Y PROTEGIDA DE JANA DISEÑOS
+const SUPABASE_URL = 'https://xfhmqebitcbtpwvlfrlv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmaG1xZWJpdGNidHB3dmxmcmx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NjUxMjIsImV4cCI6MjA4NjI0MTEyMn0.Setauc9Qjx86XEszlst0OmyZ5_gYHjI0tc1rlv12yXM';
+
 export interface SupabaseConfig {
   url: string;
   key: string;
@@ -8,26 +12,11 @@ export interface SupabaseConfig {
 
 let supabaseInstance: SupabaseClient | null = null;
 
-export const getSupabaseConfig = (): SupabaseConfig | null => {
-  const saved = localStorage.getItem('jana_supabase_config');
-  return saved ? JSON.parse(saved) : null;
-};
-
-export const saveSupabaseConfig = (config: SupabaseConfig) => {
-  localStorage.setItem('jana_supabase_config', JSON.stringify(config));
-  supabaseInstance = createClient(config.url, config.key);
-};
-
-export const clearSupabaseConfig = () => {
-  localStorage.removeItem('jana_supabase_config');
-  supabaseInstance = null;
-};
-
 export const getSupabase = (): SupabaseClient | null => {
   if (supabaseInstance) return supabaseInstance;
-  const config = getSupabaseConfig();
-  if (config) {
-    supabaseInstance = createClient(config.url, config.key);
+  
+  if (SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_URL.includes('tu-proyecto')) {
+    supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     return supabaseInstance;
   }
   return null;
@@ -37,7 +26,7 @@ export const getSupabase = (): SupabaseClient | null => {
 export const db = {
   async fetch<T>(table: string): Promise<T[]> {
     const client = getSupabase();
-    if (!client) throw new Error('Supabase no configurado');
+    if (!client) throw new Error('Supabase no está configurado correctamente en el sistema.');
     const { data, error } = await client.from(table).select('*');
     if (error) throw error;
     return data as T[];
@@ -45,14 +34,14 @@ export const db = {
 
   async upsert<T extends { id: string }>(table: string, item: T): Promise<void> {
     const client = getSupabase();
-    if (!client) throw new Error('Supabase no configurado');
+    if (!client) throw new Error('Supabase no está configurado correctamente en el sistema.');
     const { error } = await client.from(table).upsert(item);
     if (error) throw error;
   },
 
   async remove(table: string, id: string): Promise<void> {
     const client = getSupabase();
-    if (!client) throw new Error('Supabase no configurado');
+    if (!client) throw new Error('Supabase no está configurado correctamente en el sistema.');
     const { error } = await client.from(table).delete().eq('id', id);
     if (error) throw error;
   }
