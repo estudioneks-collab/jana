@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   Camera,
   Trash2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  RefreshCw
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Inventory from './components/Inventory';
@@ -36,6 +37,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isDbConnected, setIsDbConnected] = useState(false);
+  const [dbErrorMessage, setDbErrorMessage] = useState<string | null>(null);
 
   const [materials, setMaterials] = useState<Material[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -45,37 +47,48 @@ const App: React.FC = () => {
   const [logo, setLogo] = useState<string | null>(localStorage.getItem('jana_logo'));
 
   useEffect(() => {
-    const checkConnection = async () => {
-      const client = getSupabase();
-      if (client) {
-        await loadAllData();
-      }
-    };
-    checkConnection();
+    loadAllData();
   }, []);
 
   const loadAllData = async () => {
     setIsLoading(true);
+    setDbErrorMessage(null);
     try {
+      const client = getSupabase();
+      if (!client) {
+        setIsDbConnected(false);
+        setIsLoading(false);
+        return;
+      }
+
+      // Quitamos los .catch() individuales para que el try/catch principal capture si falta alguna tabla
       const [mats, trans, prods, clis, buds] = await Promise.all([
-        db.fetch<Material>('materials').catch(() => []),
-        db.fetch<Transaction>('transactions').catch(() => []),
-        db.fetch<Product>('products').catch(() => []),
-        db.fetch<Client>('clients').catch(() => []),
-        db.fetch<Budget>('budgets').catch(() => [])
+        db.fetch<Material>('materials'),
+        db.fetch<Transaction>('transactions'),
+        db.fetch<Product>('products'),
+        db.fetch<Client>('clients'),
+        db.fetch<Budget>('budgets')
       ]);
+
       setMaterials(mats || []);
       setTransactions(trans || []);
       setProducts(prods || []);
       setClients(clis || []);
       setBudgets(buds || []);
       setIsDbConnected(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error cargando datos de Jana:", err);
       setIsDbConnected(false);
+      setDbErrorMessage(err.message || "Error desconocido al conectar con la base de datos.");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleTestConnection = async () => {
+    const result = await db.testConnection();
+    alert(result.message);
+    if (result.success) loadAllData();
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,7 +160,6 @@ const App: React.FC = () => {
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Sección de Logo */}
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-[#2C3E50]/5">
                 <h3 className="text-xl font-bold mb-6 text-[#2C3E50] flex items-center gap-3">
                   <ImageIcon size={24} className="text-[#5D7F8E]" />
@@ -174,12 +186,11 @@ const App: React.FC = () => {
                     )}
                   </div>
                   <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold leading-relaxed">
-                    Este logo se utilizará en el encabezado de la aplicación y en los presupuestos PDF generados para tus clientes.
+                    Este logo se utilizará en el encabezado de la aplicación y en los presupuestos PDF generados.
                   </p>
                 </div>
               </div>
 
-              {/* Estado del Sistema */}
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-[#2C3E50]/5 space-y-6">
                 <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3">
                   <Database size={24} className="text-[#5D7F8E]" />
@@ -198,23 +209,23 @@ const App: React.FC = () => {
                   )}
                   <div>
                     <h4 className="font-bold text-[#2C3E50] text-sm">{isDbConnected ? 'Conexión Protegida' : 'Servidor Desconectado'}</h4>
-                    <p className="text-[10px] text-[#2C3E50]/60 uppercase tracking-widest font-bold">Nube Privada Activa</p>
+                    <p className="text-[10px] text-[#2C3E50]/60 uppercase tracking-widest font-bold">{isDbConnected ? 'Nube Activa' : 'Revisa las tablas'}</p>
                   </div>
                 </div>
 
-                <div className="p-6 bg-[#2C3E50] rounded-2xl text-white/80 space-y-3">
-                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
-                    <span className="text-white/40">Seguridad</span>
-                    <span className="text-emerald-400">ACTIVADA</span>
-                  </div>
-                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
-                    <span className="text-white/40">Base de Datos</span>
-                    <span>Supabase Cloud</span>
-                  </div>
-                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
-                    <span className="text-white/40">Acceso</span>
-                    <span>Restringido a Jana</span>
-                  </div>
+                <div className="space-y-4">
+                  <button 
+                    onClick={handleTestConnection}
+                    className="w-full py-3 bg-[#5D7F8E] text-white rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#4A6A78] transition-all"
+                  >
+                    <RefreshCw size={16} />
+                    Probar Conexión Ahora
+                  </button>
+                  {dbErrorMessage && (
+                    <div className="p-4 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-bold uppercase leading-relaxed">
+                      Error detectado: {dbErrorMessage}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

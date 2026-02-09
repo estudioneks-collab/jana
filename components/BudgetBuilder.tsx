@@ -27,7 +27,6 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
   const [items, setItems] = useState<BudgetItem[]>([]);
   const [utilityPercentage, setUtilityPercentage] = useState(100); 
   
-  // Estados para el nuevo sistema de descuentos
   const [discountType, setDiscountType] = useState<'fixed' | 'percent'>('percent');
   const [discountValue, setDiscountValue] = useState(0);
   const [discountDesc, setDiscountDesc] = useState('');
@@ -65,7 +64,6 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
     setItems(budget.items);
     setUtilityPercentage(budget.utilityPercentage);
     
-    // Detectar si el descuento guardado era un porcentaje basado en la descripción
     if (budget.discountDesc.includes('%')) {
       const pct = parseFloat(budget.discountDesc);
       setDiscountType('percent');
@@ -216,7 +214,8 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
     };
 
     try {
-      if (getSupabase()) {
+      const client = getSupabase();
+      if (client) {
         await db.upsert('budgets', newBudget);
         if (finalStatus === 'emitido') {
           const newTransaction: Transaction = {
@@ -238,23 +237,26 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
         setBudgets(prev => [newBudget, ...prev]);
       }
       
-      alert(finalStatus === 'emitido' ? '¡Venta registrada!' : 'Borrador guardado.');
+      alert(finalStatus === 'emitido' ? '¡Venta registrada exitosamente!' : 'Borrador guardado correctamente.');
       resetForm();
       setView('history');
       setIsPreviewOpen(false);
-    } catch (e) {
-      alert("Error al guardar.");
+    } catch (e: any) {
+      console.error("Error al guardar presupuesto:", e);
+      alert(`Error de base de datos: ${e.message || "Error desconocido"}. Revisa la pestaña de Configuración.`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteBudget = async (id: string) => {
-    if (confirm('¿Eliminar registro?')) {
+    if (confirm('¿Eliminar registro permanentemente?')) {
       try {
         if (getSupabase()) await db.remove('budgets', id);
         setBudgets(prev => prev.filter(b => b.id !== id));
-      } catch (e) {}
+      } catch (e) {
+        alert("No se pudo eliminar de la base de datos.");
+      }
     }
   };
 
@@ -321,7 +323,6 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
               </div>
             </div>
 
-            {/* SECCIÓN DE DESCUENTOS MEJORADA */}
             <div className="bg-white p-8 rounded-[2.5rem] border border-white shadow-xl shadow-slate-200/50">
               <h3 className="text-xs font-bold text-[#2C3E50] uppercase tracking-[0.2em] mb-6">Ajuste de Precio Final (Descuentos)</h3>
               <div className="flex flex-col md:flex-row gap-8 items-end">
@@ -389,7 +390,7 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
                 </div>
                 <div className="space-y-4 pt-10">
                   <button onClick={() => setIsPreviewOpen(true)} disabled={items.length === 0} className="w-full py-5 bg-[#5D7F8E] text-white rounded-[1.8rem] font-bold text-xs uppercase flex items-center justify-center gap-3 hover:bg-[#4A6A78] transition-all"><Eye size={20} /> Vista Previa</button>
-                  <button onClick={() => handleSaveBudget('pendiente')} disabled={items.length === 0} className="w-full py-5 bg-white/10 text-white rounded-[1.8rem] font-bold text-xs uppercase flex items-center justify-center gap-3 hover:bg-white/20 transition-all"><Save size={20} /> Guardar Borrador</button>
+                  <button onClick={() => handleSaveBudget('pendiente')} disabled={items.length === 0 || isSubmitting} className="w-full py-5 bg-white/10 text-white rounded-[1.8rem] font-bold text-xs uppercase flex items-center justify-center gap-3 hover:bg-white/20 transition-all disabled:opacity-50"><Save size={20} /> Guardar Borrador</button>
                 </div>
               </div>
             </div>
@@ -430,7 +431,6 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
         </div>
       )}
 
-      {/* MODAL VISTA PREVIA ACTUALIZADO */}
       {isPreviewOpen && (
         <div className="fixed inset-0 bg-[#2C3E50]/80 backdrop-blur-sm z-[200] flex items-center justify-center p-6">
           <div className="bg-white rounded-[3rem] w-full max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col border border-white shadow-2xl animate-in zoom-in-95">
