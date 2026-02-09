@@ -1,0 +1,5 @@
+{
+  "name": "Jana Diseños - Gestión de Bijouterie",
+  "description": "Para vincular esta aplicación con Supabase, necesitarás:\n1. Crear un proyecto en Supabase.\n2. Crear las tablas 'materials', 'transactions' y 'budgets' con los campos correspondientes (puedes usar el Editor SQL con los esquemas definidos en types.ts).\n3. Obtener la URL de tu proyecto y la 'anon key' desde el panel de Settings > API.\n4. Reemplazar los estados locales de React con llamadas a supabase.from('tabla').select('*') en useEffect y supabase.from('tabla').insert() en los manejadores de formularios.",
+  "requestFramePermissions": []
+}
