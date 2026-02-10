@@ -130,7 +130,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
       id,
       name: formData.name,
       category: formData.category,
-      description: formData.description,
+      description: formData.description, // SE ENVÍA AQUÍ
       items: formData.items,
       totalCost: formData.totalCost,
       suggestedPrice: formData.suggestedPrice,
@@ -148,7 +148,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
       closeModal();
     } catch (err) {
       console.error("Error al guardar producto:", err);
-      alert("Error al guardar en la base de datos. Revisa la consola.");
+      alert("Error al guardar en la base de datos.");
     } finally {
       setIsSaving(false);
     }
@@ -242,7 +242,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
                     <Calendar size={12} className="text-[#5D7F8E]" />
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{product.dateCreated}</span>
                   </div>
-                  <p className="text-sm text-slate-500 line-clamp-2 italic leading-relaxed">{product.description || 'Una pieza única de Jana Diseños.'}</p>
+                  <p className="text-sm text-slate-500 line-clamp-2 italic leading-relaxed">{product.description || 'Sin descripción disponible.'}</p>
                 </div>
 
                 <div className="mt-auto pt-6 border-t border-[#F2EFED] space-y-6">
@@ -342,13 +342,13 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#2C3E50]/40 uppercase tracking-[0.2em] mb-2 ml-2">Historia / Descripción</label>
+                      <label className="block text-[10px] font-bold text-[#2C3E50]/40 uppercase tracking-[0.2em] mb-2 ml-2">Descripción del Producto</label>
                       <textarea 
                         rows={4}
                         className="w-full px-6 py-4 bg-white border border-transparent rounded-[1.5rem] focus:ring-2 focus:ring-[#5D7F8E] outline-none transition-all resize-none text-sm leading-relaxed shadow-sm"
                         value={formData.description}
                         onChange={e => setFormData({...formData, description: e.target.value})}
-                        placeholder="Escribe la historia o detalles de esta pieza..."
+                        placeholder="Escribe aquí los detalles, historia o inspiración de esta pieza..."
                       />
                     </div>
                   </div>
