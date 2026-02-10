@@ -147,6 +147,11 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     }
   };
 
+  const handleOpenShop = () => {
+    // Abrimos la misma app pero con el parámetro mode=shop
+    window.open(window.location.origin + '?mode=shop', '_blank');
+  };
+
   const filtered = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -155,17 +160,16 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h2 className="text-5xl font-bold brand-font text-[#2C3E50] italic leading-tight">Catálogo Exclusivo</h2>
+          <h2 className="text-5xl font-bold brand-font text-[#2C3E50] italic leading-tight">Catálogo</h2>
           <div className="flex items-center gap-3 mt-2">
              <p className="text-[#5D7F8E] font-medium tracking-[0.1em] uppercase text-xs">Gestión de Diseños Jana</p>
-             <a 
-               href="/market" 
-               target="_blank" 
+             <button 
+               onClick={handleOpenShop}
                className="flex items-center gap-2 text-[10px] bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full font-bold uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
              >
                <ShoppingBag size={12} />
                Ver Tienda Online
-             </a>
+             </button>
           </div>
         </div>
         <div className="flex gap-4">
