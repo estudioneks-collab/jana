@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Product, Material } from '../types';
-import { Search, Plus, Trash2, Edit3, Tag, Calendar, X, BookmarkPlus, Camera, Image as ImageIcon, Leaf, Layers } from 'lucide-react';
+import { Search, Plus, Trash2, Edit3, Tag, Calendar, X, BookmarkPlus, Camera, Image as ImageIcon, Leaf, Layers, ShoppingBag } from 'lucide-react';
 import { db, getSupabase } from '../lib/supabase';
 
 interface Props {
@@ -156,9 +156,16 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h2 className="text-5xl font-bold brand-font text-[#2C3E50] italic leading-tight">Catálogo Exclusivo</h2>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-3 mt-2">
              <p className="text-[#5D7F8E] font-medium tracking-[0.1em] uppercase text-xs">Gestión de Diseños Jana</p>
-             <a href="/market/index.html" target="_blank" className="text-[10px] bg-[#5D7F8E] text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-widest hover:bg-[#2C3E50] transition-colors">Ver Tienda Online</a>
+             <a 
+               href="/market.html" 
+               target="_blank" 
+               className="flex items-center gap-2 text-[10px] bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full font-bold uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+             >
+               <ShoppingBag size={12} />
+               Ver Tienda Online
+             </a>
           </div>
         </div>
         <div className="flex gap-4">
