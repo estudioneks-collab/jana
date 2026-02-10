@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingBag, Search, X, MessageCircle, Leaf, Star, Heart } from 'lucide-react';
+import { ShoppingBag, Search, X, MessageCircle, Leaf, Star, Heart, ArrowRight } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { Product } from '../types';
 
@@ -13,6 +13,7 @@ const MarketView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<{product: Product, quantity: number}[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeCategory, setActiveCategory] = useState('TODAS');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -77,6 +78,9 @@ const MarketView: React.FC = () => {
       }
       return [...prev, {product, quantity: 1}];
     });
+    // Al añadir al carrito desde el detalle, podemos cerrar el detalle si queremos, 
+    // o simplemente mostrar una notificación. Por ahora, cerramos el detalle.
+    setSelectedProduct(null);
     setIsCartOpen(true);
   };
 
@@ -186,7 +190,7 @@ const MarketView: React.FC = () => {
       {/* Grid de Productos */}
       <main className="max-w-7xl mx-auto px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-12 pb-20">
         {filteredProducts.map((p) => (
-          <div key={p.id} className="group cursor-pointer">
+          <div key={p.id} className="group cursor-pointer" onClick={() => setSelectedProduct(p)}>
             <div className="aspect-[4/5] bg-white rounded-[2rem] overflow-hidden relative shadow-sm hover:shadow-xl transition-all duration-500">
               {p.imageUrl ? (
                 <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
@@ -198,14 +202,11 @@ const MarketView: React.FC = () => {
               
               <div className="absolute top-6 left-6 w-5 h-5 bg-white/80 rounded-full shadow-inner opacity-90" />
               
-              <button 
-                onClick={(e) => { e.stopPropagation(); addToCart(p); }} 
-                className="absolute inset-0 bg-black/0 group-hover:bg-black/10 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
-              >
-                <div className="bg-white text-[#2C3E50] p-4 rounded-full shadow-xl">
-                  <ShoppingBag size={24} />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 flex items-center justify-center transition-all">
+                <div className="bg-white text-[#2C3E50] px-6 py-3 rounded-full shadow-xl opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all font-bold text-xs uppercase tracking-widest">
+                  Ver Detalle
                 </div>
-              </button>
+              </div>
             </div>
             
             <div className="mt-5 text-center md:text-left px-2">
@@ -226,9 +227,74 @@ const MarketView: React.FC = () => {
         <MessageCircle size={32} fill="white" />
       </a>
 
+      {/* Footer */}
       <footer className="py-12 border-t border-slate-200/50 text-center">
          <p className="text-slate-400 text-sm font-medium">Jana Diseño 2026</p>
       </footer>
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">
+          <div className="absolute inset-0 bg-[#2C3E50]/80 backdrop-blur-md" onClick={() => setSelectedProduct(null)} />
+          <div className="relative w-full max-w-5xl bg-[#F2EFED] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-500 max-h-[90vh]">
+            <button 
+              onClick={() => setSelectedProduct(null)} 
+              className="absolute top-6 right-6 z-20 w-12 h-12 bg-white/90 rounded-2xl flex items-center justify-center text-[#2C3E50] shadow-lg hover:scale-110 transition-all"
+            >
+              <X size={24} />
+            </button>
+
+            {/* Columna Imagen */}
+            <div className="w-full md:w-1/2 h-64 md:h-auto bg-white overflow-hidden relative">
+              {selectedProduct.imageUrl ? (
+                <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-200">
+                  <Leaf size={120} strokeWidth={0.5} />
+                </div>
+              )}
+              <div className="absolute bottom-8 left-8">
+                <span className="bg-[#5D7F8E] text-white px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] shadow-xl">
+                  {selectedProduct.category || 'Bijouterie'}
+                </span>
+              </div>
+            </div>
+
+            {/* Columna Info */}
+            <div className="w-full md:w-1/2 p-10 md:p-16 flex flex-col overflow-y-auto custom-scrollbar">
+              <div className="mb-10">
+                <h3 className="brand-font text-4xl md:text-6xl text-[#2C3E50] mb-4 leading-tight italic">{selectedProduct.name}</h3>
+                <div className="w-20 h-1 bg-[#5D7F8E] rounded-full mb-8" />
+                
+                <p className="text-slate-500 text-lg leading-relaxed italic mb-8">
+                  {selectedProduct.description || "Esta pieza artesanal de Jana Diseños ha sido creada con dedicación y materiales seleccionados para brindarte un accesorio único y lleno de esencia."}
+                </p>
+
+                <div className="bg-white p-6 rounded-3xl inline-block shadow-sm">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Precio de la pieza</span>
+                  <span className="text-4xl font-black text-[#2C3E50]">${selectedProduct.suggestedPrice}</span>
+                </div>
+              </div>
+
+              <div className="mt-auto pt-8 border-t border-slate-200 space-y-4">
+                <button 
+                  onClick={() => addToCart(selectedProduct)}
+                  className="w-full bg-[#2C3E50] text-white py-5 rounded-3xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-4 shadow-2xl hover:bg-[#1A2632] transition-all"
+                >
+                  <ShoppingBag size={22} />
+                  Añadir al Carrito
+                </button>
+                <button 
+                  onClick={() => setSelectedProduct(null)}
+                  className="w-full text-slate-400 py-3 font-bold text-[10px] uppercase tracking-[0.3em] hover:text-[#2C3E50] transition-colors"
+                >
+                  Continuar viendo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cart Drawer */}
       {isCartOpen && (
@@ -241,7 +307,7 @@ const MarketView: React.FC = () => {
                 <X size={24} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-8 space-y-6">
+            <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
               {cart.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-slate-300">
                   <ShoppingBag size={64} className="mb-4 opacity-20" />
