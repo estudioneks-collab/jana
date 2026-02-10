@@ -113,7 +113,7 @@ const App: React.FC = () => {
         banner,
         whatsapp: whatsappNumber
       });
-      alert("Configuración de marca guardada en Supabase.");
+      alert("¡Identidad de Jana guardada correctamente!");
     } catch (err) {
       alert("Error al guardar configuración.");
     } finally {
@@ -177,7 +177,7 @@ const App: React.FC = () => {
             <header className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="text-center md:text-left">
                 <h2 className="text-4xl font-bold brand-font text-[#2C3E50] mb-2">Configuración</h2>
-                <p className="text-[#5D7F8E]">Personaliza la identidad visual de Jana Diseños en la nube.</p>
+                <p className="text-[#5D7F8E]">Gestiona tu identidad visual en la nube.</p>
               </div>
               <button 
                 onClick={handleSaveAllSettings}
@@ -185,13 +185,13 @@ const App: React.FC = () => {
                 className="bg-[#2C3E50] text-white px-8 py-4 rounded-2xl font-bold uppercase text-xs tracking-widest flex items-center gap-3 shadow-xl hover:bg-[#1A2632] transition-all disabled:opacity-50"
               >
                 {isSavingSettings ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <SaveIcon size={18} />}
-                Guardar en Supabase
+                Guardar Cambios
               </button>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-6">
-                <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3"><ImageIcon size={24} className="text-[#5D7F8E]" /> Logo de Marca</h3>
+                <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3"><ImageIcon size={24} className="text-[#5D7F8E]" /> Logo Principal</h3>
                 <div className="relative aspect-square bg-[#F2EFED] rounded-3xl border-2 border-dashed border-[#5D7F8E]/20 overflow-hidden flex items-center justify-center group max-w-[240px] mx-auto">
                   {logo ? (
                     <>
@@ -205,7 +205,7 @@ const App: React.FC = () => {
               </div>
 
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-6">
-                <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3"><ImageIcon size={24} className="text-[#2C3E50]" /> Banner del Market</h3>
+                <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3"><ImageIcon size={24} className="text-[#2C3E50]" /> Portada (Banner)</h3>
                 <div className="relative aspect-video bg-[#F2EFED] rounded-3xl border-2 border-dashed border-[#2C3E50]/10 overflow-hidden flex items-center justify-center group">
                   {banner ? (
                     <>
@@ -213,23 +213,22 @@ const App: React.FC = () => {
                       <button onClick={() => setBanner(null)} className="absolute top-4 right-4 w-10 h-10 bg-white/90 text-rose-500 rounded-xl shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={18} /></button>
                     </>
                   ) : (
-                    <label className="cursor-pointer flex flex-col items-center gap-3"><Camera size={40} className="text-[#2C3E50]/20" /><span className="text-sm font-bold text-[#2C3E50]/60">Subir Imagen de Portada</span><input type="file" className="hidden" onChange={handleBannerUpload} /></label>
+                    <label className="cursor-pointer flex flex-col items-center gap-3"><Camera size={40} className="text-[#2C3E50]/20" /><span className="text-sm font-bold text-[#2C3E50]/60">Subir Banner</span><input type="file" className="hidden" onChange={handleBannerUpload} /></label>
                   )}
                 </div>
-                <p className="text-[10px] text-slate-400 text-center italic">Se recomienda una imagen horizontal.</p>
               </div>
 
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-6">
-                <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3"><MessageCircle size={24} className="text-[#25D366]" /> Contacto de Tienda</h3>
+                <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3"><MessageCircle size={24} className="text-[#25D366]" /> WhatsApp</h3>
                 <div className="space-y-4">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">WhatsApp para Pedidos</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Número de Pedidos</label>
                   <div className="relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 bg-[#25D366]/10 p-1.5 rounded-lg text-[#25D366]">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#25D366]">
                       <Phone size={18} />
                     </div>
                     <input 
                       type="text"
-                      className="w-full pl-14 pr-6 py-4 bg-[#F2EFED] rounded-2xl border-none focus:ring-2 focus:ring-[#25D366] font-bold text-[#2C3E50] transition-all outline-none"
+                      className="w-full pl-14 pr-6 py-4 bg-[#F2EFED] rounded-2xl border-none focus:ring-2 focus:ring-[#25D366] font-bold text-[#2C3E50] outline-none"
                       placeholder="Ej: 5491100000000"
                       value={whatsappNumber}
                       onChange={e => setWhatsappNumber(e.target.value.replace(/\D/g, ''))}
@@ -246,19 +245,19 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex text-[#2C3E50] bg-[#F2EFED]">
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-white border-r border-[#2C3E50]/5 transition-all duration-500 flex flex-col fixed h-full z-50`}>
-        <div className="p-10 flex flex-col items-center justify-center mb-6 h-48">
+      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-white border-r border-[#2C3E50]/5 transition-all duration-500 flex flex-col fixed h-full z-50 shadow-sm`}>
+        <div className="p-8 flex flex-col items-center justify-center mb-6 h-48 overflow-hidden">
           {logo ? (
-            <div className={`transition-all duration-500 flex items-center justify-center ${isSidebarOpen ? 'h-32 w-full' : 'h-12 w-12'}`}>
+            <div className={`transition-all duration-500 flex items-center justify-center overflow-hidden ${isSidebarOpen ? 'h-32 w-full px-4' : 'h-14 w-14 p-1'}`}>
               <img 
                 src={logo} 
                 alt="Jana Diseños" 
-                className="max-w-full max-h-full object-contain" 
+                className="w-full h-full object-contain" 
               />
             </div>
           ) : (
             <div className="flex flex-col items-center">
-              <div className="w-14 h-14 bg-[#5D7F8E] rounded-2xl flex items-center justify-center text-white shadow-xl shadow-[#5D7F8E]/10 mb-2">
+              <div className="w-14 h-14 bg-[#5D7F8E] rounded-2xl flex items-center justify-center text-white shadow-xl mb-2">
                 <Leaf size={28} />
               </div>
               {isSidebarOpen && (
@@ -276,9 +275,9 @@ const App: React.FC = () => {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id as any)}
-              className={`w-full flex items-center gap-4 px-5 py-4 rounded-[1.8rem] transition-all duration-400 ${
+              className={`w-full flex items-center gap-4 px-5 py-4 rounded-[1.8rem] transition-all ${
                 activeTab === item.id 
-                  ? 'bg-[#5D7F8E] text-white shadow-xl shadow-[#5D7F8E]/20' 
+                  ? 'bg-[#5D7F8E] text-white shadow-lg' 
                   : 'text-[#2C3E50]/30 hover:bg-[#F2EFED]/50 hover:text-[#2C3E50]'
               }`}
             >
@@ -292,7 +291,7 @@ const App: React.FC = () => {
               onClick={() => setActiveTab('settings')} 
               className={`w-full flex items-center gap-4 px-5 py-4 rounded-[1.8rem] transition-all ${
                 activeTab === 'settings' 
-                  ? 'bg-[#2C3E50] text-white shadow-xl' 
+                  ? 'bg-[#2C3E50] text-white shadow-lg' 
                   : 'text-[#2C3E50]/30 hover:bg-[#F2EFED]'
               }`}
             >
