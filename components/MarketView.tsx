@@ -16,12 +16,14 @@ const MarketView: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState('TODAS');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const whatsappNumber = localStorage.getItem('jana_whatsapp') || '5491100000000';
-  const logo = localStorage.getItem('jana_logo');
-  const banner = localStorage.getItem('jana_banner');
+  const [brandSettings, setBrandSettings] = useState<{logo: string | null, banner: string | null, whatsapp: string}>({
+    logo: null,
+    banner: null,
+    whatsapp: '5491100000000'
+  });
 
   useEffect(() => {
-    fetchProducts();
+    fetchInitialData();
     const savedCart = localStorage.getItem('jana_cart');
     if (savedCart) setCart(JSON.parse(savedCart));
   }, []);
@@ -30,10 +32,27 @@ const MarketView: React.FC = () => {
     localStorage.setItem('jana_cart', JSON.stringify(cart));
   }, [cart]);
 
-  const fetchProducts = async () => {
-    const { data, error } = await supabase.from('products').select('*');
-    if (!error) setProducts(data || []);
-    setLoading(false);
+  const fetchInitialData = async () => {
+    try {
+      const [productsRes, settingsRes] = await Promise.all([
+        supabase.from('products').select('*'),
+        supabase.from('brand_settings').select('*').limit(1)
+      ]);
+
+      if (!productsRes.error) setProducts(productsRes.data || []);
+      
+      if (!settingsRes.error && settingsRes.data && settingsRes.data.length > 0) {
+        setBrandSettings({
+          logo: settingsRes.data[0].logo,
+          banner: settingsRes.data[0].banner,
+          whatsapp: settingsRes.data[0].whatsapp || '5491100000000'
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching market data:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const categories = useMemo(() => {
@@ -74,7 +93,7 @@ const MarketView: React.FC = () => {
     });
     message += `\n*Total estimado: $${total}*\n\n¿Cómo podemos coordinar el pago y la entrega?`;
     const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/${whatsappNumber}?text=${encoded}`, '_blank');
+    window.open(`https://wa.me/${brandSettings.whatsapp}?text=${encoded}`, '_blank');
   };
 
   if (loading) return (
@@ -87,11 +106,11 @@ const MarketView: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F2EFED] text-[#2C3E50]">
       {/* Header */}
-      <header className="bg-white px-8 py-4 shadow-sm">
+      <header className="bg-white px-8 py-4 shadow-sm sticky top-0 z-[60]">
         <div className="max-w-7xl mx-auto flex items-center justify-between h-20">
           <div className="h-full flex items-center">
-            {logo ? (
-              <img src={logo} alt="Jana Diseños" className="h-full max-h-16 object-contain" />
+            {brandSettings.logo ? (
+              <img src={brandSettings.logo} alt="Jana Diseños" className="h-full max-h-16 object-contain" />
             ) : (
               <div className="flex flex-col items-start">
                 <div className="flex items-center gap-2 text-[#5D7F8E]">
@@ -129,9 +148,9 @@ const MarketView: React.FC = () => {
 
       {/* Hero Section con Banner */}
       <section 
-        className={`relative py-32 px-10 overflow-hidden ${banner ? '' : 'bg-[#2C3E50]'}`}
-        style={banner ? {
-          backgroundImage: `linear-gradient(rgba(44, 62, 80, 0.6), rgba(44, 62, 80, 0.6)), url(${banner})`,
+        className={`relative py-32 px-10 overflow-hidden ${brandSettings.banner ? '' : 'bg-[#2C3E50]'}`}
+        style={brandSettings.banner ? {
+          backgroundImage: `linear-gradient(rgba(44, 62, 80, 0.6), rgba(44, 62, 80, 0.6)), url(${brandSettings.banner})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center'
         } : {}}
@@ -140,7 +159,7 @@ const MarketView: React.FC = () => {
           <h2 className="brand-font text-5xl md:text-8xl font-normal text-white drop-shadow-lg">Bienvenidos a Jana Diseños</h2>
           <p className="text-white/90 text-lg md:text-2xl font-light tracking-wide drop-shadow">Joyas con Alma Artesanal</p>
         </div>
-        {!banner && (
+        {!brandSettings.banner && (
           <div className="absolute top-0 right-0 h-full w-1/3 opacity-10 pointer-events-none">
              <Leaf size={500} className="absolute -right-20 -top-20 text-white" />
           </div>
@@ -199,7 +218,7 @@ const MarketView: React.FC = () => {
 
       {/* Botón WhatsApp Flotante */}
       <a 
-        href={`https://wa.me/${whatsappNumber}`}
+        href={`https://wa.me/${brandSettings.whatsapp}`}
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-10 right-10 w-16 h-16 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform z-[90]"
