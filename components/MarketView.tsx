@@ -18,6 +18,7 @@ const MarketView: React.FC = () => {
 
   const whatsappNumber = localStorage.getItem('jana_whatsapp') || '5491100000000';
   const logo = localStorage.getItem('jana_logo');
+  const banner = localStorage.getItem('jana_banner');
 
   useEffect(() => {
     fetchProducts();
@@ -85,16 +86,16 @@ const MarketView: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F2EFED] text-[#2C3E50]">
-      {/* Header Estilo Imagen */}
-      <header className="bg-white px-8 py-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="h-20 flex items-center">
+      {/* Header */}
+      <header className="bg-white px-8 py-4 shadow-sm">
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-20">
+          <div className="h-full flex items-center">
             {logo ? (
-              <img src={logo} alt="Jana Diseños" className="h-full object-contain" />
+              <img src={logo} alt="Jana Diseños" className="h-full max-h-16 object-contain" />
             ) : (
               <div className="flex flex-col items-start">
-                <div className="flex items-center gap-2">
-                  <Leaf className="text-[#5D7F8E]" size={28} />
+                <div className="flex items-center gap-2 text-[#5D7F8E]">
+                  <Leaf size={28} />
                   <h1 className="brand-font text-4xl leading-none">Jana</h1>
                 </div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-slate-400 ml-10">Diseños</p>
@@ -103,19 +104,19 @@ const MarketView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-6">
-            <div className="relative group">
+            <div className="relative hidden md:block">
               <input 
                 type="text" 
                 placeholder="Buscar pieza..."
-                className="pl-12 pr-6 py-3 bg-[#F2EFED]/60 rounded-full text-sm outline-none focus:ring-1 focus:ring-slate-200 w-48 md:w-64 transition-all"
+                className="pl-12 pr-6 py-2.5 bg-[#F2EFED]/60 rounded-full text-sm outline-none focus:ring-1 focus:ring-slate-200 w-64 transition-all"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
             </div>
             
             <button onClick={() => setIsCartOpen(true)} className="relative p-2 text-[#2C3E50] hover:scale-110 transition-transform">
-              <ShoppingBag size={30} strokeWidth={1.5} />
+              <ShoppingBag size={28} strokeWidth={1.5} />
               {cart.length > 0 && (
                 <span className="absolute -top-1 -right-1 w-6 h-6 bg-[#2C3E50] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
                   {cart.reduce((a, b) => a + b.quantity, 0)}
@@ -126,35 +127,36 @@ const MarketView: React.FC = () => {
         </div>
       </header>
 
-      {/* Hero Section Estilo Imagen */}
-      <section className="bg-[#2C3E50] text-white py-20 px-10 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between relative z-10">
-          <div className="text-center md:text-left space-y-2">
-            <h2 className="brand-font text-5xl md:text-7xl font-normal">Bienvenidos a Jana Diseños</h2>
-            <p className="text-white/80 text-lg md:text-2xl font-light tracking-wide">Joyas con Alma Artesanal</p>
-          </div>
-          
-          {/* Hojas Decorativas */}
-          <div className="hidden md:flex gap-4 opacity-40">
-            <div className="relative">
-               <Leaf size={120} className="rotate-45" />
-               <Leaf size={80} className="absolute -bottom-10 -right-5 rotate-[20deg]" />
-               <Leaf size={100} className="absolute top-20 -left-10 -rotate-[10deg]" />
-            </div>
-          </div>
+      {/* Hero Section con Banner */}
+      <section 
+        className={`relative py-32 px-10 overflow-hidden ${banner ? '' : 'bg-[#2C3E50]'}`}
+        style={banner ? {
+          backgroundImage: `linear-gradient(rgba(44, 62, 80, 0.6), rgba(44, 62, 80, 0.6)), url(${banner})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        } : {}}
+      >
+        <div className="max-w-7xl mx-auto flex flex-col items-center text-center relative z-10 space-y-4">
+          <h2 className="brand-font text-5xl md:text-8xl font-normal text-white drop-shadow-lg">Bienvenidos a Jana Diseños</h2>
+          <p className="text-white/90 text-lg md:text-2xl font-light tracking-wide drop-shadow">Joyas con Alma Artesanal</p>
         </div>
+        {!banner && (
+          <div className="absolute top-0 right-0 h-full w-1/3 opacity-10 pointer-events-none">
+             <Leaf size={500} className="absolute -right-20 -top-20 text-white" />
+          </div>
+        )}
       </section>
 
       {/* Categorías Pills */}
-      <nav className="max-w-7xl mx-auto px-6 py-12 flex justify-center gap-4">
+      <nav className="max-w-7xl mx-auto px-6 py-12 flex justify-center gap-4 flex-wrap">
         {categories.map(cat => (
           <button 
             key={cat} 
             onClick={() => setActiveCategory(cat)} 
-            className={`px-8 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border ${
+            className={`px-8 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border ${
               activeCategory === cat 
                 ? 'bg-[#2C3E50] text-white border-[#2C3E50] shadow-md' 
-                : 'bg-white text-slate-300 border-white hover:border-slate-100'
+                : 'bg-white text-slate-400 border-white hover:border-slate-100 shadow-sm'
             }`}
           >
             {cat}
@@ -162,21 +164,20 @@ const MarketView: React.FC = () => {
         ))}
       </nav>
 
-      {/* Grid de Productos Estilo Imagen */}
+      {/* Grid de Productos */}
       <main className="max-w-7xl mx-auto px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-12 pb-20">
         {filteredProducts.map((p) => (
           <div key={p.id} className="group cursor-pointer">
-            <div className="aspect-square bg-white rounded-[2rem] overflow-hidden relative shadow-sm hover:shadow-xl transition-all duration-500">
+            <div className="aspect-[4/5] bg-white rounded-[2rem] overflow-hidden relative shadow-sm hover:shadow-xl transition-all duration-500">
               {p.imageUrl ? (
-                <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-200">
                    <Leaf size={64} strokeWidth={0.5} />
                 </div>
               )}
               
-              {/* Círculo blanco decorativo en la esquina superior izquierda */}
-              <div className="absolute top-6 left-6 w-5 h-5 bg-white rounded-full shadow-inner opacity-90" />
+              <div className="absolute top-6 left-6 w-5 h-5 bg-white/80 rounded-full shadow-inner opacity-90" />
               
               <button 
                 onClick={(e) => { e.stopPropagation(); addToCart(p); }} 
@@ -206,7 +207,6 @@ const MarketView: React.FC = () => {
         <MessageCircle size={32} fill="white" />
       </a>
 
-      {/* Footer Estilo Imagen */}
       <footer className="py-12 border-t border-slate-200/50 text-center">
          <p className="text-slate-400 text-sm font-medium">Jana Diseño 2026</p>
       </footer>

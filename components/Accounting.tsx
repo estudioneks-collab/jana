@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { Transaction } from '../types';
-// Fixed: Added Trash2 to the imported icons from 'lucide-react'
 import { Download, Upload, Plus, Search, Calendar, DollarSign, Wallet, TrendingUp, X, Save, AlertCircle, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { db, getSupabase } from '../lib/supabase';
@@ -48,7 +47,6 @@ const Accounting: React.FC<Props> = ({ transactions, setTransactions }) => {
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws) as Transaction[];
         
-        // Intentar guardar cada uno en Supabase
         if (getSupabase()) {
           for (const item of data) {
             await db.upsert('transactions', item);
@@ -115,27 +113,27 @@ const Accounting: React.FC<Props> = ({ transactions, setTransactions }) => {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold brand-font text-[#2C3E50] italic">Contabilidad de Jana</h2>
-          <p className="text-slate-500 text-sm">Controla tus ingresos, gastos de local y ganancias mensuales.</p>
+          <h2 className="text-2xl font-bold brand-font text-[#2C3E50]">Contabilidad de Jana</h2>
+          <p className="text-slate-500 text-xs mt-1">Controla tus ingresos, gastos de local y ganancias mensuales.</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <label className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl cursor-pointer hover:bg-slate-50 transition-all font-bold text-xs uppercase tracking-widest">
-            <Upload size={16} />
+          <label className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl cursor-pointer hover:bg-slate-50 transition-all font-bold text-[10px] uppercase tracking-widest">
+            <Upload size={14} />
             Importar
             <input type="file" className="hidden" accept=".xlsx,.xls" onChange={handleImportExcel} />
           </label>
           <button 
             onClick={handleExportExcel}
-            className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-all font-bold text-xs uppercase tracking-widest"
+            className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl hover:bg-slate-50 transition-all font-bold text-[10px] uppercase tracking-widest"
           >
-            <Download size={16} />
+            <Download size={14} />
             Exportar
           </button>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center justify-center gap-2 bg-[#5D7F8E] hover:bg-[#4A6A78] text-white px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-[#5D7F8E]/20 font-bold text-xs uppercase tracking-widest"
+            className="flex items-center justify-center gap-2 bg-[#5D7F8E] hover:bg-[#4A6A78] text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-[#5D7F8E]/20 font-bold text-[10px] uppercase tracking-widest"
           >
-            <Plus size={16} />
+            <Plus size={14} />
             Nuevo Registro
           </button>
         </div>
@@ -236,7 +234,7 @@ const Accounting: React.FC<Props> = ({ transactions, setTransactions }) => {
         <div className="fixed inset-0 bg-[#2C3E50]/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-[3rem] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-white">
             <div className="p-8 border-b border-[#F2EFED] flex items-center justify-between">
-              <h3 className="text-2xl font-bold brand-font text-[#2C3E50] italic">Registrar Movimiento</h3>
+              <h3 className="text-2xl font-bold brand-font text-[#2C3E50]">Registrar Movimiento</h3>
               <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-[#2C3E50] bg-slate-50 rounded-xl">
                 <X size={20} />
               </button>

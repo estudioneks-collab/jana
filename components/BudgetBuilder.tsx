@@ -264,15 +264,15 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
     <div className="space-y-10 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h2 className="text-5xl font-bold brand-font text-[#2C3E50] italic leading-tight">Ventas y Presupuestos</h2>
-          <p className="text-[#5D7F8E] font-medium tracking-[0.1em] uppercase text-xs mt-2">Crea y emite tus cotizaciones profesionales</p>
+          <h2 className="text-3xl font-bold brand-font text-[#2C3E50] leading-tight">Ventas y Presupuestos</h2>
+          <p className="text-[#5D7F8E] font-medium tracking-[0.1em] uppercase text-[10px] mt-1">Crea y emite tus cotizaciones profesionales</p>
         </div>
         <div className="flex gap-4">
-           <button onClick={() => { setView('history'); resetForm(); }} className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all ${view === 'history' ? 'bg-[#2C3E50] text-white shadow-lg' : 'bg-white text-slate-400'}`}>
-            <History size={18} /> Historial
+           <button onClick={() => { setView('history'); resetForm(); }} className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-xs transition-all ${view === 'history' ? 'bg-[#2C3E50] text-white shadow-lg' : 'bg-white text-slate-400'}`}>
+            <History size={16} /> Historial
           </button>
-          <button onClick={() => { setView('create'); resetForm(); }} className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all ${view === 'create' ? 'bg-[#5D7F8E] text-white shadow-lg' : 'bg-white text-slate-400'}`}>
-            <Plus size={18} /> Nuevo
+          <button onClick={() => { setView('create'); resetForm(); }} className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-xs transition-all ${view === 'create' ? 'bg-[#5D7F8E] text-white shadow-lg' : 'bg-white text-slate-400'}`}>
+            <Plus size={16} /> Nuevo
           </button>
         </div>
       </header>
@@ -371,7 +371,7 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
 
           <div className="lg:col-span-4 space-y-8">
             <div className="bg-[#2C3E50] p-10 rounded-[3rem] text-white shadow-2xl sticky top-10">
-              <h3 className="text-xl font-bold brand-font italic mb-10 text-white/90">Resumen de Venta</h3>
+              <h3 className="text-xl font-bold brand-font mb-10 text-white/90">Resumen de Venta</h3>
               <div className="space-y-8">
                 <div className="pt-4 border-t border-white/10 space-y-4">
                   <label className="block text-[10px] font-bold text-[#5D7F8E] uppercase tracking-widest">Margen de Utilidad ({utilityPercentage}%)</label>
@@ -435,7 +435,7 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
         <div className="fixed inset-0 bg-[#2C3E50]/80 backdrop-blur-sm z-[200] flex items-center justify-center p-6">
           <div className="bg-white rounded-[3rem] w-full max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col border border-white shadow-2xl animate-in zoom-in-95">
             <div className="p-8 border-b flex justify-between items-center bg-slate-50">
-              <h3 className="text-xl font-bold text-[#2C3E50] brand-font italic">Vista Previa Profesional</h3>
+              <h3 className="text-xl font-bold text-[#2C3E50] brand-font">Vista Previa Profesional</h3>
               <button onClick={() => setIsPreviewOpen(false)} className="p-2 hover:bg-white rounded-xl"><X size={24} /></button>
             </div>
             
@@ -443,7 +443,7 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
               <div className="flex justify-between items-start">
                 {logo ? <img src={logo} className="w-32 h-32 object-contain" /> : <div className="w-20 h-20 bg-slate-100 rounded-2xl" />}
                 <div className="text-right">
-                  <h1 className="text-4xl font-black text-[#2C3E50] tracking-tighter">PRESUPUESTO</h1>
+                  <h1 className="text-2xl font-black text-[#2C3E50] tracking-tighter">PRESUPUESTO</h1>
                   <p className="text-slate-400 font-bold mt-2"># {editingBudgetId?.slice(-6) || 'NUEVO'}</p>
                   <p className="text-slate-400 font-bold">{new Date().toLocaleDateString()}</p>
                 </div>

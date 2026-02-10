@@ -46,7 +46,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
       setFormData({
         name: product.name,
         category: product.category || 'Collares',
-        description: product.description,
+        description: product.description || '',
         items: [...product.items],
         totalCost: product.totalCost,
         suggestedPrice: product.suggestedPrice,
@@ -127,8 +127,14 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     setIsSaving(true);
     const id = editingId || Date.now().toString();
     const productData: Product = {
-      ...formData,
       id,
+      name: formData.name,
+      category: formData.category,
+      description: formData.description,
+      items: formData.items,
+      totalCost: formData.totalCost,
+      suggestedPrice: formData.suggestedPrice,
+      imageUrl: formData.imageUrl,
       dateCreated: editingId ? (products.find(p => p.id === editingId)?.dateCreated || '') : new Date().toISOString().split('T')[0]
     };
 
@@ -141,14 +147,14 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
       }
       closeModal();
     } catch (err) {
-      alert("Error en Supabase.");
+      console.error("Error al guardar producto:", err);
+      alert("Error al guardar en la base de datos. Revisa la consola.");
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleOpenShop = () => {
-    // Abrimos la misma app pero con el parámetro mode=shop
     window.open(window.location.origin + '?mode=shop', '_blank');
   };
 
@@ -160,34 +166,34 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h2 className="text-5xl font-bold brand-font text-[#2C3E50] italic leading-tight">Catálogo</h2>
-          <div className="flex items-center gap-3 mt-2">
-             <p className="text-[#5D7F8E] font-medium tracking-[0.1em] uppercase text-xs">Gestión de Diseños Jana</p>
+          <h2 className="text-3xl font-bold brand-font text-[#2C3E50] leading-tight">Catálogo</h2>
+          <div className="flex items-center gap-3 mt-1">
+             <p className="text-[#5D7F8E] font-medium tracking-[0.1em] uppercase text-[10px]">Gestión de Diseños Jana</p>
              <button 
                onClick={handleOpenShop}
-               className="flex items-center gap-2 text-[10px] bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full font-bold uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+               className="flex items-center gap-2 text-[9px] bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full font-bold uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
              >
-               <ShoppingBag size={12} />
-               Ver Tienda Online
+               <ShoppingBag size={10} />
+               Ver Tienda
              </button>
           </div>
         </div>
         <div className="flex gap-4">
           <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#5D7F8E] transition-colors" size={18} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#5D7F8E] transition-colors" size={16} />
             <input 
               type="text" 
               placeholder="Buscar pieza..."
-              className="pl-12 pr-6 py-3 bg-white border-none rounded-[1.2rem] focus:ring-2 focus:ring-[#5D7F8E] text-sm w-full md:w-64 outline-none transition-all shadow-sm"
+              className="pl-11 pr-5 py-2.5 bg-white border-none rounded-[1.2rem] focus:ring-2 focus:ring-[#5D7F8E] text-xs w-full md:w-56 outline-none transition-all shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <button 
             onClick={() => openModal()}
-            className="flex items-center justify-center gap-2 bg-[#5D7F8E] hover:bg-[#4A6A78] text-white px-8 py-3 rounded-[1.2rem] transition-all shadow-xl shadow-[#5D7F8E]/20 font-bold text-sm tracking-wide"
+            className="flex items-center justify-center gap-2 bg-[#5D7F8E] hover:bg-[#4A6A78] text-white px-6 py-2.5 rounded-[1.2rem] transition-all shadow-xl shadow-[#5D7F8E]/20 font-bold text-xs tracking-wide uppercase"
           >
-            <Plus size={18} />
+            <Plus size={16} />
             Nueva Creación
           </button>
         </div>
@@ -209,9 +215,9 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
             <div key={product.id} className="bg-white rounded-[2.5rem] border border-white shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden group flex flex-col h-full">
               <div className="aspect-[5/4] bg-[#F2EFED] relative overflow-hidden">
                 {product.imageUrl ? (
-                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 gap-3">
+                  <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-200">
                     <ImageIcon size={56} strokeWidth={1} />
                     <span className="text-[10px] font-bold uppercase tracking-widest opacity-50">Sin Imagen</span>
                   </div>
@@ -270,11 +276,11 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
           <div className="bg-[#F2EFED] rounded-[3rem] w-full max-w-5xl max-h-[92vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 border border-white">
             <div className="p-10 flex items-center justify-between bg-white border-b border-[#F2EFED]">
               <div>
-                <h3 className="text-3xl font-bold brand-font text-[#2C3E50] italic">{editingId ? 'Refinar Diseño' : 'Nueva Pieza Jana'}</h3>
-                <p className="text-sm text-[#5D7F8E] font-medium mt-1">Detalles técnicos y visuales de tu obra.</p>
+                <h3 className="text-2xl font-bold brand-font text-[#2C3E50]">Refinar Diseño</h3>
+                <p className="text-xs text-[#5D7F8E] font-medium mt-1 uppercase tracking-widest">Detalles técnicos y visuales de tu obra.</p>
               </div>
-              <button onClick={closeModal} className="w-14 h-14 flex items-center justify-center text-slate-300 hover:text-[#2C3E50] bg-[#F2EFED] rounded-2xl transition-all active:scale-90">
-                <X size={28} />
+              <button onClick={closeModal} className="w-12 h-12 flex items-center justify-center text-slate-300 hover:text-[#2C3E50] bg-[#F2EFED] rounded-2xl transition-all active:scale-90">
+                <X size={24} />
               </button>
             </div>
 
@@ -342,6 +348,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
                         className="w-full px-6 py-4 bg-white border border-transparent rounded-[1.5rem] focus:ring-2 focus:ring-[#5D7F8E] outline-none transition-all resize-none text-sm leading-relaxed shadow-sm"
                         value={formData.description}
                         onChange={e => setFormData({...formData, description: e.target.value})}
+                        placeholder="Escribe la historia o detalles de esta pieza..."
                       />
                     </div>
                   </div>
