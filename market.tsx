@@ -4,12 +4,11 @@ import ReactDOM from 'react-dom/client';
 import { ShoppingBag, Search, X, MessageCircle, ChevronRight, Leaf, Instagram, Heart, Star, Filter } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
-// Credenciales sincronizadas
 const SUPABASE_URL = 'https://xfhmqebitcbtpwvlfrlv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmaG1xZWJpdGNidHB3dmxmcmx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NjUxMjIsImV4cCI6MjA4NjI0MTEyMn0.Setauc9Qjx86XEszlst0OmyZ5_gYHjI0tc1rlv12yXM';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const WHATSAPP_NUMBER = '5491100000000'; // Asegúrate de cambiar este número
+const WHATSAPP_NUMBER = '5491100000000'; 
 
 interface Product {
   id: string;
@@ -124,11 +123,11 @@ const MarketApp: React.FC = () => {
         </div>
       </header>
 
-      <section className="bg-[#2C3E50] text-white py-24 px-6 relative overflow-hidden">
+      <section className="bg-[#2C3E50] text-white py-24 px-6 relative overflow-hidden text-center md:text-left">
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="max-w-2xl fade-up">
             <h2 className="brand-font text-6xl md:text-8xl italic mb-6">Joyas con Alma</h2>
-            <p className="text-white/60 text-lg md:text-xl font-light leading-relaxed max-w-lg mb-10">Piezas artesanales diseñadas para resaltar tu esencia natural.</p>
+            <p className="text-white/60 text-lg md:text-xl font-light leading-relaxed max-w-lg mb-10 mx-auto md:mx-0">Piezas artesanales diseñadas para resaltar tu esencia natural.</p>
           </div>
         </div>
         <div className="absolute top-0 right-0 h-full w-1/3 opacity-10 pointer-events-none">

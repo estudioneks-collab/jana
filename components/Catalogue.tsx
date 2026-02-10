@@ -159,7 +159,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
           <div className="flex items-center gap-3 mt-2">
              <p className="text-[#5D7F8E] font-medium tracking-[0.1em] uppercase text-xs">Gestión de Diseños Jana</p>
              <a 
-               href="/market/" 
+               href="/market" 
                target="_blank" 
                className="flex items-center gap-2 text-[10px] bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full font-bold uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
              >
