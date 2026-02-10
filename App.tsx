@@ -114,8 +114,8 @@ const App: React.FC = () => {
         whatsapp: whatsappNumber
       });
       alert("¡Identidad de Jana guardada correctamente!");
-    } catch (err) {
-      alert("Error al guardar configuración.");
+    } catch (err: any) {
+      alert(`Error al guardar configuración: ${err.message}`);
     } finally {
       setIsSavingSettings(false);
     }
