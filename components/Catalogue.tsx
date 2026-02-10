@@ -1,8 +1,7 @@
 
 import React, { useState } from 'react';
 import { Product, Material } from '../types';
-// Import Leaf icon to fix "Cannot find name 'Leaf'" error
-import { Search, Plus, Trash2, Edit3, Tag, Calendar, X, BookmarkPlus, Camera, Image as ImageIcon, Leaf } from 'lucide-react';
+import { Search, Plus, Trash2, Edit3, Tag, Calendar, X, BookmarkPlus, Camera, Image as ImageIcon, Leaf, Layers } from 'lucide-react';
 import { db, getSupabase } from '../lib/supabase';
 
 interface Props {
@@ -10,6 +9,8 @@ interface Props {
   materials: Material[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
 }
+
+const CATEGORIES = ['Collares', 'Pulseras', 'Aros', 'Anillos', 'Sets', 'Otros'];
 
 const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,6 +20,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
 
   const [formData, setFormData] = useState<Omit<Product, 'id' | 'dateCreated'>>({
     name: '',
+    category: 'Collares',
     description: '',
     items: [],
     totalCost: 0,
@@ -43,6 +45,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
       setEditingId(product.id);
       setFormData({
         name: product.name,
+        category: product.category || 'Collares',
         description: product.description,
         items: [...product.items],
         totalCost: product.totalCost,
@@ -53,6 +56,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
       setEditingId(null);
       setFormData({
         name: '',
+        category: 'Collares',
         description: '',
         items: [],
         totalCost: 0,
@@ -79,7 +83,6 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     }
   };
 
-  // Fixed: Use Product['items'] type instead of BudgetItem[]
   const calculateTotals = (items: Product['items']) => {
     const cost = items.reduce((acc, item) => acc + item.subtotal, 0);
     return { cost, suggested: cost * 2 };
@@ -93,7 +96,6 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     setFormData({ ...formData, items: newItems, totalCost: totals.cost, suggestedPrice: totals.suggested });
   };
 
-  // Fixed: Corrected parameter type to match Product items keys instead of BudgetItem
   const updateItem = (index: number, field: keyof (Product['items'][0]), value: any) => {
     const newItems = [...formData.items];
     const item = newItems[index];
@@ -154,7 +156,10 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h2 className="text-5xl font-bold brand-font text-[#2C3E50] italic leading-tight">Catálogo Exclusivo</h2>
-          <p className="text-[#5D7F8E] font-medium tracking-[0.1em] uppercase text-xs mt-2">Nuestras Creaciones Jana Diseños</p>
+          <div className="flex items-center gap-2 mt-2">
+             <p className="text-[#5D7F8E] font-medium tracking-[0.1em] uppercase text-xs">Gestión de Diseños Jana</p>
+             <a href="/market/index.html" target="_blank" className="text-[10px] bg-[#5D7F8E] text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-widest hover:bg-[#2C3E50] transition-colors">Ver Tienda Online</a>
+          </div>
         </div>
         <div className="flex gap-4">
           <div className="relative group">
@@ -200,7 +205,8 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
                     <span className="text-[10px] font-bold uppercase tracking-widest opacity-50">Sin Imagen</span>
                   </div>
                 )}
-                <div className="absolute top-6 right-6 flex gap-2">
+                <div className="absolute top-6 left-6 flex gap-2">
+                   <span className="bg-white/90 backdrop-blur-md text-[#5D7F8E] text-[9px] font-bold px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-sm">{product.category}</span>
                    <button 
                     onClick={() => handleDelete(product.id)}
                     className="w-10 h-10 bg-white/80 backdrop-blur-md text-slate-400 hover:text-rose-500 rounded-xl transition-all shadow-lg flex items-center justify-center"
@@ -248,7 +254,6 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
         </div>
       )}
 
-      {/* Modal Reestilizado */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#2C3E50]/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
           <div className="bg-[#F2EFED] rounded-[3rem] w-full max-w-5xl max-h-[92vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 border border-white">
@@ -295,14 +300,29 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
                   </div>
 
                   <div className="space-y-6">
-                    <div>
-                      <label className="block text-[10px] font-bold text-[#2C3E50]/40 uppercase tracking-[0.2em] mb-2 ml-2">Nombre de la Pieza</label>
-                      <input 
-                        required
-                        className="w-full px-6 py-4 bg-white border border-transparent rounded-[1.5rem] focus:ring-2 focus:ring-[#5D7F8E] outline-none transition-all font-semibold shadow-sm"
-                        value={formData.name}
-                        onChange={e => setFormData({...formData, name: e.target.value})}
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-[#2C3E50]/40 uppercase tracking-[0.2em] mb-2 ml-2">Categoría</label>
+                        <div className="relative">
+                          <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                          <select 
+                            className="w-full pl-12 pr-6 py-4 bg-white border border-transparent rounded-[1.5rem] focus:ring-2 focus:ring-[#5D7F8E] outline-none transition-all font-semibold shadow-sm appearance-none"
+                            value={formData.category}
+                            onChange={e => setFormData({...formData, category: e.target.value})}
+                          >
+                            {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-bold text-[#2C3E50]/40 uppercase tracking-[0.2em] mb-2 ml-2">Nombre de la Pieza</label>
+                        <input 
+                          required
+                          className="w-full px-6 py-4 bg-white border border-transparent rounded-[1.5rem] focus:ring-2 focus:ring-[#5D7F8E] outline-none transition-all font-semibold shadow-sm"
+                          value={formData.name}
+                          onChange={e => setFormData({...formData, name: e.target.value})}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-[#2C3E50]/40 uppercase tracking-[0.2em] mb-2 ml-2">Historia / Descripción</label>

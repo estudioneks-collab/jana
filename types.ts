@@ -30,6 +30,7 @@ export interface Budget {
 export interface Product {
   id: string;
   name: string;
+  category: string;
   description: string;
   items: { materialId: string; quantity: number; subtotal: number }[];
   totalCost: number;

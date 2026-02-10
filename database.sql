@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS clients (
 CREATE TABLE IF NOT EXISTS products (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  category TEXT DEFAULT 'Bijouterie',
   description TEXT,
   items JSONB DEFAULT '[]'::jsonb, -- Lista de materiales {materialId, quantity, subtotal}
   "totalCost" NUMERIC DEFAULT 0,
