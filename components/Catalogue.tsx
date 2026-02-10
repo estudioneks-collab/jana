@@ -130,7 +130,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
       id,
       name: formData.name,
       category: formData.category,
-      description: formData.description, // SE ENVÍA AQUÍ
+      description: formData.description || '', 
       items: formData.items,
       totalCost: formData.totalCost,
       suggestedPrice: formData.suggestedPrice,
@@ -139,16 +139,24 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     };
 
     try {
-      if (getSupabase()) await db.upsert('products', productData);
+      const supabaseClient = getSupabase();
+      if (supabaseClient) {
+        // Usamos upsert directamente para capturar mejor el error si existe
+        const { error } = await supabaseClient.from('products').upsert(productData);
+        if (error) throw error;
+      }
+      
       if (editingId) {
         setProducts(prev => prev.map(p => p.id === editingId ? productData : p));
       } else {
         setProducts(prev => [productData, ...prev]);
       }
       closeModal();
-    } catch (err) {
-      console.error("Error al guardar producto:", err);
-      alert("Error al guardar en la base de datos.");
+      alert("¡Producto guardado correctamente!");
+    } catch (err: any) {
+      console.error("Error detallado de Supabase:", err);
+      // Mostramos el mensaje de error real para diagnosticar
+      alert(`Error al guardar: ${err.message || 'Error desconocido'}. Asegúrate de haber ejecutado el SQL de reparación.`);
     } finally {
       setIsSaving(false);
     }
