@@ -22,7 +22,8 @@ import {
   RefreshCw,
   ShoppingBag,
   MessageCircle,
-  Phone
+  Phone,
+  Save as SaveIcon
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Inventory from './components/Inventory';
@@ -50,9 +51,10 @@ const App: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   
-  const [logo, setLogo] = useState<string | null>(localStorage.getItem('jana_logo'));
-  const [banner, setBanner] = useState<string | null>(localStorage.getItem('jana_banner'));
-  const [whatsappNumber, setWhatsappNumber] = useState<string>(localStorage.getItem('jana_whatsapp') || '5491100000000');
+  const [logo, setLogo] = useState<string | null>(null);
+  const [banner, setBanner] = useState<string | null>(null);
+  const [whatsappNumber, setWhatsappNumber] = useState<string>('5491100000000');
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   useEffect(() => {
     if (!isShopMode) {
@@ -71,12 +73,13 @@ const App: React.FC = () => {
         return;
       }
 
-      const [mats, trans, prods, clis, buds] = await Promise.all([
+      const [mats, trans, prods, clis, buds, settings] = await Promise.all([
         db.fetch<Material>('materials'),
         db.fetch<Transaction>('transactions'),
         db.fetch<Product>('products'),
         db.fetch<Client>('clients'),
-        db.fetch<Budget>('budgets')
+        db.fetch<Budget>('budgets'),
+        db.fetch<{id: string, logo: string, banner: string, whatsapp: string}>('brand_settings')
       ]);
 
       setMaterials(mats || []);
@@ -84,6 +87,13 @@ const App: React.FC = () => {
       setProducts(prods || []);
       setClients(clis || []);
       setBudgets(buds || []);
+      
+      if (settings && settings.length > 0) {
+        setLogo(settings[0].logo);
+        setBanner(settings[0].banner);
+        setWhatsappNumber(settings[0].whatsapp || '5491100000000');
+      }
+
       setIsDbConnected(true);
     } catch (err: any) {
       console.error("Error cargando datos de Jana:", err);
@@ -94,15 +104,28 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSaveAllSettings = async () => {
+    setIsSavingSettings(true);
+    try {
+      await db.upsert('brand_settings', {
+        id: 'primary',
+        logo,
+        banner,
+        whatsapp: whatsappNumber
+      });
+      alert("Configuración de marca guardada en Supabase.");
+    } catch (err) {
+      alert("Error al guardar configuración.");
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        setLogo(base64);
-        localStorage.setItem('jana_logo', base64);
-      };
+      reader.onloadend = () => setLogo(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
@@ -111,19 +134,9 @@ const App: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        setBanner(base64);
-        localStorage.setItem('jana_banner', base64);
-      };
+      reader.onloadend = () => setBanner(reader.result as string);
       reader.readAsDataURL(file);
     }
-  };
-
-  const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, ''); 
-    setWhatsappNumber(val);
-    localStorage.setItem('jana_whatsapp', val);
   };
 
   const navItems = [
@@ -161,9 +174,19 @@ const App: React.FC = () => {
       case 'settings':
         return (
           <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-            <header className="text-center">
-              <h2 className="text-4xl font-bold brand-font text-[#2C3E50] mb-2">Configuración</h2>
-              <p className="text-[#5D7F8E]">Personaliza la identidad visual de Jana Diseños.</p>
+            <header className="flex flex-col md:flex-row justify-between items-center gap-6">
+              <div className="text-center md:text-left">
+                <h2 className="text-4xl font-bold brand-font text-[#2C3E50] mb-2">Configuración</h2>
+                <p className="text-[#5D7F8E]">Personaliza la identidad visual de Jana Diseños en la nube.</p>
+              </div>
+              <button 
+                onClick={handleSaveAllSettings}
+                disabled={isSavingSettings}
+                className="bg-[#2C3E50] text-white px-8 py-4 rounded-2xl font-bold uppercase text-xs tracking-widest flex items-center gap-3 shadow-xl hover:bg-[#1A2632] transition-all disabled:opacity-50"
+              >
+                {isSavingSettings ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <SaveIcon size={18} />}
+                Guardar en Supabase
+              </button>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -173,7 +196,7 @@ const App: React.FC = () => {
                   {logo ? (
                     <>
                       <img src={logo} alt="Logo" className="w-full h-full object-contain p-4" />
-                      <button onClick={() => {setLogo(null); localStorage.removeItem('jana_logo');}} className="absolute top-4 right-4 w-10 h-10 bg-white/90 text-rose-500 rounded-xl shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={18} /></button>
+                      <button onClick={() => setLogo(null)} className="absolute top-4 right-4 w-10 h-10 bg-white/90 text-rose-500 rounded-xl shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={18} /></button>
                     </>
                   ) : (
                     <label className="cursor-pointer flex flex-col items-center gap-3"><Camera size={40} className="text-[#5D7F8E]/40" /><span className="text-sm font-bold text-[#5D7F8E]">Subir Logo</span><input type="file" className="hidden" onChange={handleLogoUpload} /></label>
@@ -187,13 +210,13 @@ const App: React.FC = () => {
                   {banner ? (
                     <>
                       <img src={banner} alt="Banner" className="w-full h-full object-cover" />
-                      <button onClick={() => {setBanner(null); localStorage.removeItem('jana_banner');}} className="absolute top-4 right-4 w-10 h-10 bg-white/90 text-rose-500 rounded-xl shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={18} /></button>
+                      <button onClick={() => setBanner(null)} className="absolute top-4 right-4 w-10 h-10 bg-white/90 text-rose-500 rounded-xl shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={18} /></button>
                     </>
                   ) : (
                     <label className="cursor-pointer flex flex-col items-center gap-3"><Camera size={40} className="text-[#2C3E50]/20" /><span className="text-sm font-bold text-[#2C3E50]/60">Subir Imagen de Portada</span><input type="file" className="hidden" onChange={handleBannerUpload} /></label>
                   )}
                 </div>
-                <p className="text-[10px] text-slate-400 text-center italic">Se recomienda una imagen horizontal (paisaje).</p>
+                <p className="text-[10px] text-slate-400 text-center italic">Se recomienda una imagen horizontal.</p>
               </div>
 
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-6">
@@ -209,25 +232,9 @@ const App: React.FC = () => {
                       className="w-full pl-14 pr-6 py-4 bg-[#F2EFED] rounded-2xl border-none focus:ring-2 focus:ring-[#25D366] font-bold text-[#2C3E50] transition-all outline-none"
                       placeholder="Ej: 5491100000000"
                       value={whatsappNumber}
-                      onChange={handleWhatsappChange}
+                      onChange={e => setWhatsappNumber(e.target.value.replace(/\D/g, ''))}
                     />
                   </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-6">
-                <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3"><Database size={24} className="text-[#5D7F8E]" /> Base de Datos</h3>
-                <div className="space-y-4">
-                  <div className="p-5 bg-[#F2EFED] rounded-2xl flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDbConnected ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'}`}>
-                      {isDbConnected ? <ShieldCheck size={24} /> : <CloudOff size={24} />}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-[#2C3E50] text-sm">{isDbConnected ? 'En Línea' : 'Error de Conexión'}</h4>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">{isDbConnected ? 'Supabase Conectado' : 'Revisa tu clave anon'}</p>
-                    </div>
-                  </div>
-                  <button onClick={() => window.location.reload()} className="w-full py-4 bg-[#5D7F8E] text-white rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#4A6A78] transition-all"><RefreshCw size={16} /> Reintentar</button>
                 </div>
               </div>
             </div>
