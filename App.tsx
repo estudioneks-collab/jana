@@ -20,7 +20,9 @@ import {
   Trash2,
   Image as ImageIcon,
   RefreshCw,
-  ShoppingBag
+  ShoppingBag,
+  MessageCircle,
+  Phone
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Inventory from './components/Inventory';
@@ -48,7 +50,9 @@ const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  
   const [logo, setLogo] = useState<string | null>(localStorage.getItem('jana_logo'));
+  const [whatsappNumber, setWhatsappNumber] = useState<string>(localStorage.getItem('jana_whatsapp') || '5491100000000');
 
   useEffect(() => {
     if (!isShopMode) {
@@ -103,6 +107,12 @@ const App: React.FC = () => {
     }
   };
 
+  const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, ''); // Solo números
+    setWhatsappNumber(val);
+    localStorage.setItem('jana_whatsapp', val);
+  };
+
   const navItems = [
     { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard },
     { id: 'inventory', label: 'Materiales', icon: Package },
@@ -145,8 +155,8 @@ const App: React.FC = () => {
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl">
-                <h3 className="text-xl font-bold mb-6 text-[#2C3E50] flex items-center gap-3"><ImageIcon size={24} className="text-[#5D7F8E]" /> Logo de Marca</h3>
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-6">
+                <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3"><ImageIcon size={24} className="text-[#5D7F8E]" /> Identidad Visual</h3>
                 <div className="relative aspect-video bg-[#F2EFED] rounded-3xl border-2 border-dashed border-[#5D7F8E]/20 overflow-hidden flex items-center justify-center group">
                   {logo ? (
                     <>
@@ -160,17 +170,41 @@ const App: React.FC = () => {
               </div>
 
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-6">
-                <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3"><Database size={24} className="text-[#5D7F8E]" /> Base de Datos</h3>
-                <div className="p-5 bg-[#F2EFED] rounded-2xl flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDbConnected ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'}`}>
-                    {isDbConnected ? <ShieldCheck size={24} /> : <CloudOff size={24} />}
+                <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3"><MessageCircle size={24} className="text-[#25D366]" /> Contacto de Tienda</h3>
+                <div className="space-y-4">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">WhatsApp para Pedidos</label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 bg-[#25D366]/10 p-1.5 rounded-lg text-[#25D366]">
+                      <Phone size={18} />
+                    </div>
+                    <input 
+                      type="text"
+                      className="w-full pl-14 pr-6 py-4 bg-[#F2EFED] rounded-2xl border-none focus:ring-2 focus:ring-[#25D366] font-bold text-[#2C3E50] transition-all outline-none"
+                      placeholder="Ej: 5491100000000"
+                      value={whatsappNumber}
+                      onChange={handleWhatsappChange}
+                    />
                   </div>
-                  <div>
-                    <h4 className="font-bold text-[#2C3E50] text-sm">{isDbConnected ? 'En Línea' : 'Error de Conexión'}</h4>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">{isDbConnected ? 'Supabase Conectado' : 'Revisa tu clave anon'}</p>
-                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium px-2 leading-relaxed">
+                    Ingresa el número con código de país, sin el signo + ni espacios (Ej: 549...). Este número recibirá los mensajes de compra de tus clientes.
+                  </p>
                 </div>
-                <button onClick={() => window.location.reload()} className="w-full py-4 bg-[#5D7F8E] text-white rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#4A6A78] transition-all"><RefreshCw size={16} /> Reintentar Conexión</button>
+              </div>
+
+              <div className="md:col-span-2 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-6">
+                <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3"><Database size={24} className="text-[#5D7F8E]" /> Base de Datos</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                  <div className="p-5 bg-[#F2EFED] rounded-2xl flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDbConnected ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'}`}>
+                      {isDbConnected ? <ShieldCheck size={24} /> : <CloudOff size={24} />}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-[#2C3E50] text-sm">{isDbConnected ? 'En Línea' : 'Error de Conexión'}</h4>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">{isDbConnected ? 'Supabase Conectado' : 'Revisa tu clave anon'}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => window.location.reload()} className="py-4 bg-[#5D7F8E] text-white rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#4A6A78] transition-all shadow-lg shadow-[#5D7F8E]/20"><RefreshCw size={16} /> Reintentar Conexión</button>
+                </div>
               </div>
             </div>
           </div>

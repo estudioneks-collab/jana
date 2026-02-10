@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingBag, Search, X, MessageCircle, Leaf, Star, Heart, ArrowLeft } from 'lucide-react';
+import { ShoppingBag, Search, X, MessageCircle, Leaf, Star, Heart } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { Product } from '../types';
 
@@ -8,15 +8,16 @@ const SUPABASE_URL = 'https://xfhmqebitcbtpwvlfrlv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmaG1xZWJpdGNidHB3dmxmcmx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NjUxMjIsImV4cCI6MjA4NjI0MTEyMn0.Setauc9Qjx86XEszlst0OmyZ5_gYHjI0tc1rlv12yXM';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const WHATSAPP_NUMBER = '5491100000000'; 
-
 const MarketView: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<{product: Product, quantity: number}[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState('Todas');
+  const [activeCategory, setActiveCategory] = useState('TODAS');
   const [searchTerm, setSearchTerm] = useState('');
+
+  const whatsappNumber = localStorage.getItem('jana_whatsapp') || '5491100000000';
+  const logo = localStorage.getItem('jana_logo');
 
   useEffect(() => {
     fetchProducts();
@@ -35,13 +36,14 @@ const MarketView: React.FC = () => {
   };
 
   const categories = useMemo(() => {
-    const cats = new Set(products.map(p => p.category || 'Bijouterie'));
-    return ['Todas', ...Array.from(cats)];
+    const cats = new Set(products.map(p => p.category?.toUpperCase() || 'BIJOUTERIE'));
+    return ['TODAS', ...Array.from(cats)];
   }, [products]);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      const matchesCat = activeCategory === 'Todas' || p.category === activeCategory;
+      const pCat = p.category?.toUpperCase() || 'BIJOUTERIE';
+      const matchesCat = activeCategory === 'TODAS' || pCat === activeCategory;
       const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesCat && matchesSearch;
     });
@@ -71,113 +73,200 @@ const MarketView: React.FC = () => {
     });
     message += `\n*Total estimado: $${total}*\n\n¿Cómo podemos coordinar el pago y la entrega?`;
     const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`, '_blank');
+    window.open(`https://wa.me/${whatsappNumber}?text=${encoded}`, '_blank');
   };
 
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#F2EFED]">
       <div className="w-16 h-16 border-4 border-[#5D7F8E]/20 border-t-[#5D7F8E] rounded-full animate-spin mb-4"></div>
-      <p className="brand-font text-2xl text-[#2C3E50] italic">Inspirando Belleza...</p>
+      <p className="brand-font text-2xl text-[#2C3E50] italic">Cargando Jana Diseños...</p>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[#F2EFED] text-[#2C3E50]">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-[#2C3E50]/5">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-[#5D7F8E] rounded-xl flex items-center justify-center text-white shadow-lg">
-              <Leaf size={20} />
-            </div>
-            <div>
-              <h1 className="brand-font text-2xl leading-none">Jana</h1>
-              <p className="text-[8px] font-bold uppercase tracking-[0.3em] text-[#5D7F8E]">Colección Online</p>
-            </div>
+      {/* Header Estilo Imagen */}
+      <header className="bg-white px-8 py-6">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="h-20 flex items-center">
+            {logo ? (
+              <img src={logo} alt="Jana Diseños" className="h-full object-contain" />
+            ) : (
+              <div className="flex flex-col items-start">
+                <div className="flex items-center gap-2">
+                  <Leaf className="text-[#5D7F8E]" size={28} />
+                  <h1 className="brand-font text-4xl leading-none">Jana</h1>
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-slate-400 ml-10">Diseños</p>
+              </div>
+            )}
           </div>
+
           <div className="flex items-center gap-6">
-            <div className="hidden md:flex relative items-center">
-              <Search className="absolute left-3 text-slate-300" size={16} />
+            <div className="relative group">
               <input 
                 type="text" 
                 placeholder="Buscar pieza..."
-                className="pl-10 pr-4 py-2 bg-[#F2EFED] rounded-full text-xs outline-none focus:ring-2 focus:ring-[#5D7F8E] w-48 transition-all"
+                className="pl-12 pr-6 py-3 bg-[#F2EFED]/60 rounded-full text-sm outline-none focus:ring-1 focus:ring-slate-200 w-48 md:w-64 transition-all"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
             </div>
-            <button onClick={() => setIsCartOpen(true)} className="relative p-2 hover:text-[#5D7F8E] transition-colors">
-              <ShoppingBag size={24} />
-              {cart.length > 0 && <span className="absolute top-0 right-0 w-5 h-5 bg-[#5D7F8E] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">{cart.reduce((a, b) => a + b.quantity, 0)}</span>}
+            
+            <button onClick={() => setIsCartOpen(true)} className="relative p-2 text-[#2C3E50] hover:scale-110 transition-transform">
+              <ShoppingBag size={30} strokeWidth={1.5} />
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-6 h-6 bg-[#2C3E50] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                  {cart.reduce((a, b) => a + b.quantity, 0)}
+                </span>
+              )}
             </button>
           </div>
         </div>
       </header>
 
-      <section className="bg-[#2C3E50] text-white py-24 px-6 relative overflow-hidden text-center">
-        <div className="max-w-7xl mx-auto relative z-10">
-          <h2 className="brand-font text-6xl md:text-8xl italic mb-6">Joyas con Alma</h2>
-          <p className="text-white/60 text-lg md:text-xl font-light leading-relaxed max-w-lg mx-auto mb-10">Diseños únicos para acompañar cada momento de tu historia.</p>
-        </div>
-        <div className="absolute top-0 right-0 h-full w-1/3 opacity-10 pointer-events-none">
-           <Leaf size={500} className="absolute -right-20 -top-20" />
+      {/* Hero Section Estilo Imagen */}
+      <section className="bg-[#2C3E50] text-white py-20 px-10 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between relative z-10">
+          <div className="text-center md:text-left space-y-2">
+            <h2 className="brand-font text-5xl md:text-7xl font-normal">Bienvenidos a Jana Diseños</h2>
+            <p className="text-white/80 text-lg md:text-2xl font-light tracking-wide">Joyas con Alma Artesanal</p>
+          </div>
+          
+          {/* Hojas Decorativas */}
+          <div className="hidden md:flex gap-4 opacity-40">
+            <div className="relative">
+               <Leaf size={120} className="rotate-45" />
+               <Leaf size={80} className="absolute -bottom-10 -right-5 rotate-[20deg]" />
+               <Leaf size={100} className="absolute top-20 -left-10 -rotate-[10deg]" />
+            </div>
+          </div>
         </div>
       </section>
 
-      <nav className="max-w-7xl mx-auto px-6 py-12 overflow-x-auto">
-        <div className="flex gap-4 justify-center whitespace-nowrap">
-          {categories.map(cat => (
-            <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${activeCategory === cat ? 'bg-[#2C3E50] text-white shadow-lg' : 'bg-white text-slate-400'}`}>{cat}</button>
-          ))}
-        </div>
+      {/* Categorías Pills */}
+      <nav className="max-w-7xl mx-auto px-6 py-12 flex justify-center gap-4">
+        {categories.map(cat => (
+          <button 
+            key={cat} 
+            onClick={() => setActiveCategory(cat)} 
+            className={`px-8 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border ${
+              activeCategory === cat 
+                ? 'bg-[#2C3E50] text-white border-[#2C3E50] shadow-md' 
+                : 'bg-white text-slate-300 border-white hover:border-slate-100'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
+      {/* Grid de Productos Estilo Imagen */}
+      <main className="max-w-7xl mx-auto px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-12 pb-20">
         {filteredProducts.map((p) => (
-          <div key={p.id} className="group">
-            <div className="aspect-[4/5] bg-white rounded-[2.5rem] overflow-hidden relative shadow-sm border border-white hover:shadow-2xl transition-all duration-500">
-              {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" /> : <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-200"><Star size={48} /></div>}
-              <div className="absolute top-6 left-6"><span className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl text-[8px] font-bold uppercase tracking-widest text-[#5D7F8E]">{p.category}</span></div>
-              <button onClick={() => addToCart(p)} className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-md py-4 rounded-2xl flex items-center justify-center gap-3 text-[#2C3E50] font-bold text-xs uppercase tracking-widest translate-y-20 group-hover:translate-y-0 transition-all duration-500 hover:bg-[#5D7F8E] hover:text-white"><ShoppingBag size={18} /> Añadir al Carrito</button>
+          <div key={p.id} className="group cursor-pointer">
+            <div className="aspect-square bg-white rounded-[2rem] overflow-hidden relative shadow-sm hover:shadow-xl transition-all duration-500">
+              {p.imageUrl ? (
+                <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-200">
+                   <Leaf size={64} strokeWidth={0.5} />
+                </div>
+              )}
+              
+              {/* Círculo blanco decorativo en la esquina superior izquierda */}
+              <div className="absolute top-6 left-6 w-5 h-5 bg-white rounded-full shadow-inner opacity-90" />
+              
+              <button 
+                onClick={(e) => { e.stopPropagation(); addToCart(p); }} 
+                className="absolute inset-0 bg-black/0 group-hover:bg-black/10 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+              >
+                <div className="bg-white text-[#2C3E50] p-4 rounded-full shadow-xl">
+                  <ShoppingBag size={24} />
+                </div>
+              </button>
             </div>
-            <div className="mt-6 px-4">
-              <h3 className="brand-font text-2xl text-[#2C3E50] mb-1">{p.name}</h3>
-              <p className="text-xl font-black text-[#5D7F8E]">${p.suggestedPrice}</p>
+            
+            <div className="mt-5 text-center md:text-left px-2">
+              <h3 className="brand-font text-2xl text-[#2C3E50] italic font-bold mb-1">{p.name}</h3>
+              <p className="text-xl font-black text-[#5D7F8E] tracking-tight">${p.suggestedPrice}</p>
             </div>
           </div>
         ))}
       </main>
 
+      {/* Botón WhatsApp Flotante */}
+      <a 
+        href={`https://wa.me/${whatsappNumber}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-10 right-10 w-16 h-16 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform z-[90]"
+      >
+        <MessageCircle size={32} fill="white" />
+      </a>
+
+      {/* Footer Estilo Imagen */}
+      <footer className="py-12 border-t border-slate-200/50 text-center">
+         <p className="text-slate-400 text-sm font-medium">Jana Diseño 2026</p>
+      </footer>
+
+      {/* Cart Drawer */}
       {isCartOpen && (
         <div className="fixed inset-0 z-[100] flex justify-end">
-          <div className="absolute inset-0 bg-[#2C3E50]/40 backdrop-blur-sm" onClick={() => setIsCartOpen(false)} />
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setIsCartOpen(false)} />
           <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-500">
             <div className="p-8 border-b flex items-center justify-between">
-              <div className="flex items-center gap-3"><ShoppingBag size={24} className="text-[#5D7F8E]" /><h3 className="text-xl font-bold brand-font italic">Tu Selección</h3></div>
-              <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-slate-50 rounded-xl"><X size={24} /></button>
+              <h3 className="text-2xl font-bold brand-font italic">Tu Selección</h3>
+              <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors">
+                <X size={24} />
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto p-8 space-y-6">
-              {cart.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-center text-slate-300"><ShoppingBag size={48} className="mb-4" /><p>Tu carrito está esperando piezas únicas</p></div> : cart.map(item => (
-                <div key={item.product.id} className="flex gap-4">
-                  <div className="w-20 h-24 bg-slate-50 rounded-2xl overflow-hidden shrink-0">{item.product.imageUrl && <img src={item.product.imageUrl} className="w-full h-full object-cover" />}</div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-[#2C3E50] text-sm">{item.product.name}</h4>
-                    <div className="flex items-center justify-between mt-3"><p className="font-black text-[#5D7F8E]">${item.product.suggestedPrice}</p><div className="flex items-center gap-2"><span className="text-xs font-bold bg-[#F2EFED] px-2 py-1 rounded-lg">x{item.quantity}</span><button onClick={() => removeFromCart(item.product.id)} className="text-rose-300"><X size={16} /></button></div></div>
-                  </div>
+              {cart.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-slate-300">
+                  <ShoppingBag size={64} className="mb-4 opacity-20" />
+                  <p className="font-medium">Tu carrito está esperando piezas únicas</p>
                 </div>
-              ))}
+              ) : (
+                cart.map(item => (
+                  <div key={item.product.id} className="flex gap-4 group">
+                    <div className="w-20 h-20 bg-slate-50 rounded-2xl overflow-hidden shrink-0 shadow-inner">
+                      {item.product.imageUrl && <img src={item.product.imageUrl} className="w-full h-full object-cover" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-[#2C3E50] text-sm truncate">{item.product.name}</h4>
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="font-black text-[#5D7F8E]">${item.product.suggestedPrice}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold bg-[#F2EFED] px-3 py-1 rounded-lg">x{item.quantity}</span>
+                          <button onClick={() => removeFromCart(item.product.id)} className="text-rose-300 hover:text-rose-500 transition-colors">
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
             {cart.length > 0 && (
               <div className="p-8 border-t bg-[#F2EFED]/30">
-                <div className="flex justify-between items-end mb-8"><span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total</span><span className="text-4xl font-black text-[#2C3E50]">${total}</span></div>
-                <button onClick={handleWhatsAppOrder} className="w-full bg-[#25D366] text-white py-5 rounded-2xl font-bold text-xs uppercase flex items-center justify-center gap-3 shadow-xl"><MessageCircle size={20} /> Pedir por WhatsApp</button>
+                <div className="flex justify-between items-end mb-8">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Estimado</span>
+                  <span className="text-4xl font-black text-[#2C3E50] tracking-tighter">${total}</span>
+                </div>
+                <button 
+                  onClick={handleWhatsAppOrder} 
+                  className="w-full bg-[#25D366] text-white py-5 rounded-3xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl hover:bg-[#20ba5a] transition-all"
+                >
+                  <MessageCircle size={20} fill="white" /> Consultar pedido por WhatsApp
+                </button>
               </div>
             )}
           </div>
         </div>
       )}
-      <footer className="py-20 text-center border-t border-[#2C3E50]/5 mt-20">
-         <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">© 2024 Jana Diseños - Arte hecho a mano</p>
-      </footer>
     </div>
   );
 };
