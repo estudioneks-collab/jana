@@ -141,7 +141,6 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     try {
       const supabaseClient = getSupabase();
       if (supabaseClient) {
-        // Usamos upsert directamente para capturar mejor el error si existe
         const { error } = await supabaseClient.from('products').upsert(productData);
         if (error) throw error;
       }
@@ -152,11 +151,14 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
         setProducts(prev => [productData, ...prev]);
       }
       closeModal();
-      alert("¡Producto guardado correctamente!");
+      alert("¡Pieza de Jana guardada correctamente!");
     } catch (err: any) {
       console.error("Error detallado de Supabase:", err);
-      // Mostramos el mensaje de error real para diagnosticar
-      alert(`Error al guardar: ${err.message || 'Error desconocido'}. Asegúrate de haber ejecutado el SQL de reparación.`);
+      let errorMsg = err.message || 'Error desconocido';
+      if (errorMsg.includes('category') || errorMsg.includes('description')) {
+        errorMsg = "Faltan columnas en la base de datos. Por favor, ejecuta el script de 'ALTER TABLE' en el editor SQL de Supabase.";
+      }
+      alert(`Error al guardar: ${errorMsg}`);
     } finally {
       setIsSaving(false);
     }
