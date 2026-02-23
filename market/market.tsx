@@ -24,6 +24,7 @@ const MarketApp: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<{product: Product, quantity: number}[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -64,6 +65,7 @@ const MarketApp: React.FC = () => {
       }
       return [...prev, {product, quantity: 1}];
     });
+    setSelectedProduct(null);
     setIsCartOpen(true);
   };
 
@@ -145,11 +147,13 @@ const MarketApp: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
         {filteredProducts.map((p, idx) => (
-          <div key={p.id} className="group fade-up" style={{ animationDelay: `${idx * 0.1}s` }}>
+          <div key={p.id} className="group fade-up cursor-pointer" style={{ animationDelay: `${idx * 0.1}s` }} onClick={() => setSelectedProduct(p)}>
             <div className="aspect-[4/5] bg-white rounded-[2.5rem] overflow-hidden relative shadow-sm border border-white hover:shadow-2xl transition-all duration-500">
               {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" /> : <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-200"><Star size={48} /></div>}
               <div className="absolute top-6 left-6"><span className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl text-[8px] font-bold uppercase tracking-widest text-[#5D7F8E]">{p.category}</span></div>
-              <button onClick={() => addToCart(p)} className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-md py-4 rounded-2xl flex items-center justify-center gap-3 text-[#2C3E50] font-bold text-xs uppercase tracking-widest translate-y-20 group-hover:translate-y-0 transition-all duration-500 hover:bg-[#5D7F8E] hover:text-white"><ShoppingBag size={18} /> Añadir al Carrito</button>
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 flex items-center justify-center transition-all">
+                <div className="bg-white/90 backdrop-blur-md px-6 py-3 rounded-2xl opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all font-bold text-xs uppercase tracking-widest text-[#2C3E50]">Ver Pieza</div>
+              </div>
             </div>
             <div className="mt-6 px-4">
               <h3 className="brand-font text-2xl text-[#2C3E50] mb-1">{p.name}</h3>
@@ -158,6 +162,25 @@ const MarketApp: React.FC = () => {
           </div>
         ))}
       </main>
+
+      {/* Detail Modal */}
+      {selectedProduct && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">
+          <div className="absolute inset-0 bg-[#2C3E50]/80 backdrop-blur-md" onClick={() => setSelectedProduct(null)} />
+          <div className="relative w-full max-w-5xl bg-[#F2EFED] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-500 max-h-[90vh]">
+            <button onClick={() => setSelectedProduct(null)} className="absolute top-6 right-6 z-20 w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#2C3E50] shadow-lg hover:scale-110 transition-all"><X size={24} /></button>
+            <div className="w-full md:w-1/2 h-64 md:h-auto bg-white">{selectedProduct.imageUrl && <img src={selectedProduct.imageUrl} className="w-full h-full object-cover" />}</div>
+            <div className="w-full md:w-1/2 p-10 md:p-16 flex flex-col overflow-y-auto custom-scrollbar">
+              <h3 className="brand-font text-4xl md:text-6xl text-[#2C3E50] mb-4 leading-tight italic">{selectedProduct.name}</h3>
+              <p className="text-slate-500 text-lg leading-relaxed italic mb-8">{selectedProduct.description || "Inspiración artesanal única de Jana Diseños."}</p>
+              <div className="bg-white p-6 rounded-3xl inline-block shadow-sm mb-10"><span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Precio</span><span className="text-4xl font-black text-[#2C3E50]">${selectedProduct.suggestedPrice}</span></div>
+              <div className="mt-auto pt-8 border-t border-slate-200 space-y-4">
+                <button onClick={() => addToCart(selectedProduct)} className="w-full bg-[#2C3E50] text-white py-5 rounded-3xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-4 shadow-2xl hover:bg-[#1A2632] transition-all"><ShoppingBag size={22} /> Añadir al Carrito</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isCartOpen && (
         <div className="fixed inset-0 z-[100] flex justify-end animate-in fade-in duration-300">

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Product, Material } from '../types';
-import { Search, Plus, Trash2, Edit3, Tag, Calendar, X, BookmarkPlus, Camera, Image as ImageIcon, Leaf, Layers, ShoppingBag } from 'lucide-react';
+import { Search, Plus, Trash2, Edit3, Tag, Calendar, X, BookmarkPlus, Camera, Image as ImageIcon, Leaf, Layers, ShoppingBag, ChevronLeft, ChevronRight } from 'lucide-react';
 import { db, getSupabase } from '../lib/supabase';
 
 interface Props {
@@ -25,7 +25,8 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     items: [],
     totalCost: 0,
     suggestedPrice: 0,
-    imageUrl: ''
+    margin: 200,
+    imageUrls: []
   });
 
   const handleDelete = async (id: string) => {
@@ -50,7 +51,8 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
         items: [...product.items],
         totalCost: product.totalCost,
         suggestedPrice: product.suggestedPrice,
-        imageUrl: product.imageUrl || ''
+        margin: product.margin || 200,
+        imageUrls: product.imageUrls || (product.imageUrl ? [product.imageUrl] : [])
       });
     } else {
       setEditingId(null);
@@ -61,7 +63,8 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
         items: [],
         totalCost: 0,
         suggestedPrice: 0,
-        imageUrl: ''
+        margin: 200,
+        imageUrls: []
       });
     }
     setIsModalOpen(true);
@@ -72,27 +75,43 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     setEditingId(null);
   };
 
+  // Fixed TypeScript error: explicit cast for 'file' and 'reader.readAsDataURL' to prevent 'unknown' vs 'Blob' mismatch
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, imageUrl: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach((file: any) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFormData(prev => ({ 
+            ...prev, 
+            imageUrls: [...prev.imageUrls, reader.result as string] 
+          }));
+        };
+        reader.readAsDataURL(file as Blob);
+      });
     }
   };
 
-  const calculateTotals = (items: Product['items']) => {
+  const removeImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      imageUrls: prev.imageUrls.filter((_, i) => i !== index)
+    }));
+  };
+
+  const calculateTotals = (items: Product['items'], margin: number | 'manual', currentSuggested: number) => {
     const cost = items.reduce((acc, item) => acc + item.subtotal, 0);
-    return { cost, suggested: cost * 2 };
+    if (margin === 'manual') {
+      return { cost, suggested: currentSuggested };
+    }
+    return { cost, suggested: Math.round(cost * (margin / 100)) };
   };
 
   const addItem = () => {
     if (materials.length === 0) return alert('Carga materiales primero.');
     const firstMat = materials[0];
     const newItems = [...formData.items, { materialId: firstMat.id, quantity: 1, subtotal: firstMat.costPerUnit }];
-    const totals = calculateTotals(newItems);
+    const totals = calculateTotals(newItems, formData.margin || 200, formData.suggestedPrice);
     setFormData({ ...formData, items: newItems, totalCost: totals.cost, suggestedPrice: totals.suggested });
   };
 
@@ -110,13 +129,13 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
       item.subtotal = (mat?.costPerUnit || 0) * item.quantity;
     }
 
-    const totals = calculateTotals(newItems);
+    const totals = calculateTotals(newItems, formData.margin || 200, formData.suggestedPrice);
     setFormData({ ...formData, items: newItems, totalCost: totals.cost, suggestedPrice: totals.suggested });
   };
 
   const removeItem = (index: number) => {
     const newItems = formData.items.filter((_, i) => i !== index);
-    const totals = calculateTotals(newItems);
+    const totals = calculateTotals(newItems, formData.margin || 200, formData.suggestedPrice);
     setFormData({ ...formData, items: newItems, totalCost: totals.cost, suggestedPrice: totals.suggested });
   };
 
@@ -134,7 +153,9 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
       items: formData.items,
       totalCost: formData.totalCost,
       suggestedPrice: formData.suggestedPrice,
-      imageUrl: formData.imageUrl,
+      margin: formData.margin,
+      imageUrl: formData.imageUrls[0] || '', // Sincronizamos con el campo viejo por si acaso
+      imageUrls: formData.imageUrls,
       dateCreated: editingId ? (products.find(p => p.id === editingId)?.dateCreated || '') : new Date().toISOString().split('T')[0]
     };
 
@@ -153,12 +174,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
       closeModal();
       alert("¡Pieza de Jana guardada correctamente!");
     } catch (err: any) {
-      console.error("Error detallado de Supabase:", err);
-      let errorMsg = err.message || 'Error desconocido';
-      if (errorMsg.includes('category') || errorMsg.includes('description')) {
-        errorMsg = "Faltan columnas en la base de datos. Por favor, ejecuta el script de 'ALTER TABLE' en el editor SQL de Supabase.";
-      }
-      alert(`Error al guardar: ${errorMsg}`);
+      alert(`Error al guardar: ${err.message || 'Error desconocido'}`);
     } finally {
       setIsSaving(false);
     }
@@ -223,9 +239,9 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {filtered.map(product => (
             <div key={product.id} className="bg-white rounded-[2.5rem] border border-white shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden group flex flex-col h-full">
-              <div className="aspect-[5/4] bg-[#F2EFED] relative overflow-hidden">
-                {product.imageUrl ? (
-                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+              <div className="aspect-[5/4] bg-[#F2EFED] relative overflow-hidden flex items-center justify-center p-2">
+                {(product.imageUrls?.length > 0 || product.imageUrl) ? (
+                  <img src={product.imageUrls?.[0] || product.imageUrl} alt={product.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-1000" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-200">
                     <ImageIcon size={56} strokeWidth={1} />
@@ -235,7 +251,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
                 <div className="absolute top-6 left-6 flex gap-2">
                    <span className="bg-white/90 backdrop-blur-md text-[#5D7F8E] text-[9px] font-bold px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-sm">{product.category}</span>
                    <button 
-                    onClick={() => handleDelete(product.id)}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(product.id); }}
                     className="w-10 h-10 bg-white/80 backdrop-blur-md text-slate-400 hover:text-rose-500 rounded-xl transition-all shadow-lg flex items-center justify-center"
                   >
                     <Trash2 size={18} />
@@ -298,31 +314,27 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                 <div className="lg:col-span-5 space-y-8">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-[#2C3E50]/40 uppercase tracking-[0.2em] ml-2">Vista del Producto</label>
-                    <div className="relative aspect-square bg-white rounded-[2.5rem] border-2 border-dashed border-[#5D7F8E]/20 overflow-hidden group/img shadow-inner">
-                      {formData.imageUrl ? (
-                        <>
-                          <img src={formData.imageUrl} className="w-full h-full object-cover" />
-                          <button 
+                    <label className="text-[10px] font-bold text-[#2C3E50]/40 uppercase tracking-[0.2em] ml-2">Galería de Imágenes</label>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      {formData.imageUrls.map((url, idx) => (
+                        <div key={idx} className="relative aspect-square bg-white rounded-2xl border border-slate-200 overflow-hidden group">
+                           <img src={url} className="w-full h-full object-contain" />
+                           <button 
                             type="button"
-                            onClick={() => setFormData({...formData, imageUrl: ''})}
-                            className="absolute top-6 right-6 w-12 h-12 bg-white/90 backdrop-blur shadow-xl rounded-2xl flex items-center justify-center text-rose-500 opacity-0 group-hover/img:opacity-100 transition-all active:scale-90"
-                          >
-                            <Trash2 size={24} />
-                          </button>
-                        </>
-                      ) : (
-                        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition-all gap-4 p-10 text-center">
-                          <div className="w-20 h-20 bg-[#F2EFED] text-[#5D7F8E] rounded-3xl flex items-center justify-center shadow-lg">
-                            <Camera size={40} strokeWidth={1.5} />
-                          </div>
-                          <div>
-                            <p className="text-lg font-bold text-[#2C3E50]">Capturar Obra</p>
-                            <p className="text-xs text-slate-400 mt-1">JPEG o PNG • Máx 5MB</p>
-                          </div>
-                          <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                        </label>
-                      )}
+                            onClick={() => removeImage(idx)}
+                            className="absolute top-2 right-2 w-8 h-8 bg-rose-500 text-white rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg"
+                           >
+                             <Trash2 size={16} />
+                           </button>
+                        </div>
+                      ))}
+                      
+                      <label className="aspect-square bg-white rounded-2xl border-2 border-dashed border-[#5D7F8E]/20 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 transition-all text-center p-4">
+                         <Camera size={24} className="text-[#5D7F8E]/40" />
+                         <span className="text-[9px] font-bold text-[#5D7F8E] uppercase tracking-widest">Añadir Foto</span>
+                         <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
+                      </label>
                     </div>
                   </div>
 
@@ -419,6 +431,36 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
                       <p className="text-5xl font-bold text-white">${formData.totalCost}</p>
                     </div>
                     <div className="text-center md:text-right relative z-10">
+                      <div className="mb-4 flex flex-wrap justify-center md:justify-end gap-2">
+                        {[200, 300, 400].map(m => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => {
+                              const suggested = Math.round(formData.totalCost * (m / 100));
+                              setFormData({ ...formData, margin: m, suggestedPrice: suggested });
+                            }}
+                            className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all ${
+                              formData.margin === m 
+                                ? 'bg-white text-[#5D7F8E] shadow-lg' 
+                                : 'bg-white/10 text-white hover:bg-white/20'
+                            }`}
+                          >
+                            {m}%
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, margin: 'manual' })}
+                          className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all ${
+                            formData.margin === 'manual' 
+                              ? 'bg-white text-[#5D7F8E] shadow-lg' 
+                              : 'bg-white/10 text-white hover:bg-white/20'
+                          }`}
+                        >
+                          Manual
+                        </button>
+                      </div>
                       <label className="block text-[10px] text-white/50 uppercase font-bold tracking-[0.3em] mb-3">Valor Sugerido Mercado</label>
                       <div className="flex items-center gap-4 justify-center md:justify-end">
                         <span className="text-3xl font-light text-white/30">$</span>
@@ -426,7 +468,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
                           type="number"
                           className="w-40 bg-white/10 border-2 border-white/20 rounded-[1.5rem] px-6 py-3 text-3xl font-bold text-white text-right outline-none focus:bg-white/20 transition-all"
                           value={formData.suggestedPrice}
-                          onChange={e => setFormData({...formData, suggestedPrice: Number(e.target.value)})}
+                          onChange={e => setFormData({...formData, suggestedPrice: Number(e.target.value), margin: 'manual'})}
                         />
                       </div>
                     </div>

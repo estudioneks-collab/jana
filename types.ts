@@ -35,7 +35,9 @@ export interface Product {
   items: { materialId: string; quantity: number; subtotal: number }[];
   totalCost: number;
   suggestedPrice: number;
-  imageUrl?: string;
+  margin?: number | 'manual';
+  imageUrl?: string; // Mantenido por compatibilidad
+  imageUrls: string[]; // Nueva propiedad
   dateCreated: string;
 }
 

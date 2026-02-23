@@ -30,12 +30,16 @@ CREATE TABLE IF NOT EXISTS products (
   "totalCost" NUMERIC DEFAULT 0,
   "suggestedPrice" NUMERIC DEFAULT 0,
   "imageUrl" TEXT,
+  "imageUrls" JSONB DEFAULT '[]'::jsonb,
+  "margin" TEXT,
   "dateCreated" TEXT
 );
 
 -- Forzar adición de columnas si la tabla ya existía sin ellas
 ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'Bijouterie';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS "imageUrls" JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS "margin" TEXT;
 
 -- 4. Tabla de Transacciones
 CREATE TABLE IF NOT EXISTS transactions (
