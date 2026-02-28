@@ -74,7 +74,7 @@ const App: React.FC = () => {
       }
 
       // Fetching individually to identify which one fails if any
-      const fetchTable = async <T>(table: string) => {
+      const fetchTable = async <T extends unknown>(table: string) => {
         try {
           const data = await db.fetch<T>(table);
           return data || [];
