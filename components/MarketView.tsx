@@ -23,6 +23,7 @@ const MarketView: React.FC = () => {
     banner: null,
     whatsapp: '5491100000000'
   });
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchInitialData();
@@ -35,23 +36,28 @@ const MarketView: React.FC = () => {
   }, [cart]);
 
   const fetchInitialData = async () => {
+    setError(null);
     try {
       const [productsRes, settingsRes] = await Promise.all([
         supabase.from('products').select('*'),
         supabase.from('brand_settings').select('*').limit(1)
       ]);
 
-      if (!productsRes.error) setProducts(productsRes.data || []);
+      if (productsRes.error) throw productsRes.error;
+      if (settingsRes.error) throw settingsRes.error;
+
+      setProducts(productsRes.data || []);
       
-      if (!settingsRes.error && settingsRes.data && settingsRes.data.length > 0) {
+      if (settingsRes.data && settingsRes.data.length > 0) {
         setBrandSettings({
           logo: settingsRes.data[0].logo,
           banner: settingsRes.data[0].banner,
           whatsapp: settingsRes.data[0].whatsapp || '5491100000000'
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching market data:", err);
+      setError(err.message || "Error al cargar los productos.");
     } finally {
       setLoading(false);
     }
@@ -118,6 +124,22 @@ const MarketView: React.FC = () => {
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#F2EFED]">
       <div className="w-16 h-16 border-4 border-[#5D7F8E]/20 border-t-[#5D7F8E] rounded-full animate-spin mb-4"></div>
       <p className="brand-font text-2xl text-[#2C3E50] italic">Cargando Jana Diseños...</p>
+    </div>
+  );
+
+  if (error) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F2EFED] p-10 text-center">
+      <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center shadow-inner mb-6">
+        <X size={40} />
+      </div>
+      <h2 className="brand-font text-3xl text-[#2C3E50] mb-2">Ups, algo salió mal</h2>
+      <p className="text-slate-500 max-w-md mb-8">{error}</p>
+      <button 
+        onClick={fetchInitialData}
+        className="px-8 py-4 bg-[#2C3E50] text-white rounded-2xl font-bold uppercase text-xs tracking-widest hover:bg-[#1A2632] transition-all shadow-lg"
+      >
+        Reintentar
+      </button>
     </div>
   );
 

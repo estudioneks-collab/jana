@@ -73,20 +73,52 @@ const App: React.FC = () => {
         return;
       }
 
-      const [mats, trans, prods, clis, buds, settings] = await Promise.all([
-        db.fetch<Material>('materials'),
-        db.fetch<Transaction>('transactions'),
-        db.fetch<Product>('products'),
-        db.fetch<Client>('clients'),
-        db.fetch<Budget>('budgets'),
-        db.fetch<{id: string, logo: string, banner: string, whatsapp: string}>('brand_settings')
-      ]);
+      // Fetching individually to identify which one fails if any
+      const fetchTable = async <T>(table: string) => {
+        try {
+          const data = await db.fetch<T>(table);
+          return data || [];
+        } catch (err: any) {
+          console.error(`Error fetching table ${table}:`, err);
+          
+          // Si es un timeout en productos, intentamos una carga "ligera" sin imágenes para que al menos vea los nombres
+          if (table === 'products' && err.message?.includes('timeout')) {
+            try {
+              const client = getSupabase();
+              if (client) {
+                const { data: liteData, error: liteError } = await client
+                  .from('products')
+                  .select('id, name, category, description, totalCost, suggestedPrice, dateCreated, items');
+                
+                if (!liteError && liteData) {
+                  setDbErrorMessage("La tabla de productos es muy pesada. Se cargaron los datos sin imágenes para permitirte limpiar o editar.");
+                  return liteData as T[];
+                }
+              }
+            } catch (liteErr) {
+              console.error("Error en carga ligera:", liteErr);
+            }
+          }
 
-      setMaterials(mats || []);
-      setTransactions(trans || []);
-      setProducts(prods || []);
-      setClients(clis || []);
-      setBudgets(buds || []);
+          if (err.message?.includes('timeout')) {
+            setDbErrorMessage(`La tabla "${table}" es muy pesada y dio error de tiempo. El resto de la app funcionará.`);
+          }
+          return []; 
+        }
+      };
+
+      const mats = await fetchTable<Material>('materials');
+      const trans = await fetchTable<Transaction>('transactions');
+      const prods = await fetchTable<Product>('products');
+      const clis = await fetchTable<Client>('clients');
+      const buds = await fetchTable<Budget>('budgets');
+      const settings = await fetchTable<{id: string, logo: string, banner: string, whatsapp: string}>('brand_settings');
+
+      setMaterials(mats);
+      setTransactions(trans);
+      setProducts(prods);
+      setClients(clis);
+      setBudgets(buds);
       
       if (settings && settings.length > 0) {
         setLogo(settings[0].logo);
@@ -163,6 +195,27 @@ const App: React.FC = () => {
       );
     }
 
+    if (!isDbConnected && dbErrorMessage) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 p-10 bg-white rounded-[3rem] border-2 border-dashed border-rose-200 shadow-xl">
+          <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center shadow-inner">
+            <CloudOff size={40} />
+          </div>
+          <div className="text-center space-y-2">
+            <h3 className="text-2xl font-bold text-[#2C3E50]">Error de Conexión</h3>
+            <p className="text-slate-500 max-w-md mx-auto">{dbErrorMessage}</p>
+          </div>
+          <button 
+            onClick={loadAllData}
+            className="flex items-center gap-3 px-8 py-4 bg-[#2C3E50] text-white rounded-2xl font-bold uppercase text-xs tracking-widest hover:bg-[#1A2632] transition-all shadow-lg"
+          >
+            <RefreshCw size={18} />
+            Reintentar Conexión
+          </button>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'dashboard': return <Dashboard materials={materials} transactions={transactions} />;
       case 'inventory': return <Inventory materials={materials} setMaterials={setMaterials} />;
@@ -190,6 +243,29 @@ const App: React.FC = () => {
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-6">
+                <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3"><Database size={24} className="text-[#5D7F8E]" /> Estado de Base de Datos</h3>
+                <div className="p-6 bg-[#F2EFED] rounded-3xl border border-[#5D7F8E]/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Conexión Supabase</span>
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${isDbConnected ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                      {isDbConnected ? 'Activa' : 'Desconectada'}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={async () => {
+                      const res = await db.testConnection();
+                      alert(res.message);
+                      if (res.success) loadAllData();
+                    }}
+                    className="w-full py-3 bg-white text-[#5D7F8E] border border-[#5D7F8E]/20 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-[#5D7F8E] hover:text-white transition-all shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw size={14} />
+                    Probar Conexión
+                  </button>
+                </div>
+              </div>
+
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-6">
                 <h3 className="text-xl font-bold text-[#2C3E50] flex items-center gap-3"><ImageIcon size={24} className="text-[#5D7F8E]" /> Logo Principal</h3>
                 <div className="relative aspect-square bg-[#F2EFED] rounded-3xl border-2 border-dashed border-[#5D7F8E]/20 overflow-hidden flex items-center justify-center group max-w-[240px] mx-auto">
