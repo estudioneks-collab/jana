@@ -23,7 +23,9 @@ import {
   ShoppingBag,
   MessageCircle,
   Phone,
-  Save as SaveIcon
+  Save as SaveIcon,
+  LogOut,
+  Loader2
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Inventory from './components/Inventory';
@@ -33,6 +35,7 @@ import QuickCalculator from './components/QuickCalculator';
 import Catalogue from './components/Catalogue';
 import Clients from './components/Clients';
 import MarketView from './components/MarketView';
+import Auth from './components/Auth';
 import { Material, Transaction, Product, Client, Budget } from './types';
 import { getSupabase, db } from './lib/supabase';
 
@@ -44,6 +47,8 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDbConnected, setIsDbConnected] = useState(false);
   const [dbErrorMessage, setDbErrorMessage] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   const [materials, setMaterials] = useState<Material[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -57,12 +62,34 @@ const App: React.FC = () => {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   useEffect(() => {
-    if (!isShopMode) {
+    const supabase = getSupabase();
+    if (!supabase) {
+      setIsAuthChecking(false);
+      return;
+    }
+
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setIsAuthChecking(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!isShopMode && user) {
       loadAllData();
     }
-  }, [isShopMode]);
+  }, [isShopMode, user]);
 
   const loadAllData = async () => {
+    if (!user) return;
     setIsLoading(true);
     setDbErrorMessage(null);
     try {
@@ -136,6 +163,13 @@ const App: React.FC = () => {
     }
   };
 
+  const handleLogout = async () => {
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+  };
+
   const handleSaveAllSettings = async () => {
     setIsSavingSettings(true);
     try {
@@ -183,6 +217,19 @@ const App: React.FC = () => {
 
   if (isShopMode) {
     return <MarketView />;
+  }
+
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F2EFED]">
+        <Loader2 className="animate-spin text-[#5D7F8E]" size={48} />
+        <p className="mt-4 brand-font text-[#2C3E50]/60 italic">Verificando acceso...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Auth onAuthSuccess={() => {}} />;
   }
 
   const renderContent = () => {
@@ -373,6 +420,14 @@ const App: React.FC = () => {
             >
               <Settings size={22} className={activeTab === 'settings' ? 'text-white' : 'text-[#2C3E50]/20'} />
               {isSidebarOpen && <span className="text-sm font-bold tracking-wide">Ajustes</span>}
+            </button>
+
+            <button 
+              onClick={handleLogout} 
+              className="w-full flex items-center gap-4 px-5 py-4 rounded-[1.8rem] transition-all text-rose-400 hover:bg-rose-50 hover:text-rose-600 mt-2"
+            >
+              <LogOut size={22} />
+              {isSidebarOpen && <span className="text-sm font-bold tracking-wide">Cerrar Sesión</span>}
             </button>
           </div>
         </nav>
