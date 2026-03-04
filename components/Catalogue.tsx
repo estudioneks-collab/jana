@@ -181,7 +181,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
   };
 
   const handleOpenShop = () => {
-    window.open(window.location.origin + '?mode=shop', '_blank');
+    window.open(window.location.origin + '/', '_blank');
   };
 
   const filtered = products.filter(p => 

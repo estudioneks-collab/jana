@@ -4,8 +4,8 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/market",
-      "destination": "/market.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

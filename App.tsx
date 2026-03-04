@@ -40,7 +40,7 @@ import { Material, Transaction, Product, Client, Budget } from './types';
 import { getSupabase, db } from './lib/supabase';
 
 const App: React.FC = () => {
-  const isShopMode = new URLSearchParams(window.location.search).get('mode') === 'shop';
+  const isAdminMode = window.location.pathname.startsWith('/admin');
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'budgets' | 'accounting' | 'calculator' | 'catalogue' | 'clients' | 'settings'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -83,10 +83,10 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!isShopMode && user) {
+    if (isAdminMode && user) {
       loadAllData();
     }
-  }, [isShopMode, user]);
+  }, [isAdminMode, user]);
 
   const loadAllData = async () => {
     if (!user) return;
@@ -215,7 +215,7 @@ const App: React.FC = () => {
     { id: 'calculator', label: 'Calculadora', icon: Calculator },
   ];
 
-  if (isShopMode) {
+  if (!isAdminMode) {
     return <MarketView />;
   }
 
