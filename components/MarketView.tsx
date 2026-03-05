@@ -38,15 +38,9 @@ const MarketView: React.FC = () => {
   const fetchInitialData = async () => {
     setError(null);
     try {
-      const [productsRes, settingsRes] = await Promise.all([
-        supabase.from('products').select('*'),
-        supabase.from('brand_settings').select('*').limit(1)
-      ]);
-
-      if (productsRes.error) throw productsRes.error;
+      // Fetch settings first
+      const settingsRes = await supabase.from('brand_settings').select('*').limit(1);
       if (settingsRes.error) throw settingsRes.error;
-
-      setProducts(productsRes.data || []);
       
       if (settingsRes.data && settingsRes.data.length > 0) {
         setBrandSettings({
@@ -54,6 +48,26 @@ const MarketView: React.FC = () => {
           banner: settingsRes.data[0].banner,
           whatsapp: settingsRes.data[0].whatsapp || '5491100000000'
         });
+      }
+
+      // Fetch products
+      const productsRes = await supabase.from('products').select('*');
+      
+      if (productsRes.error) {
+        if (productsRes.error.message?.includes('timeout')) {
+          // Fallback to lite fetch without images
+          const liteRes = await supabase.from('products').select('id, name, category, description, totalCost, suggestedPrice, dateCreated, items');
+          if (!liteRes.error) {
+            setProducts(liteRes.data || []);
+            setError("El catálogo tiene imágenes muy pesadas y tardó demasiado en responder. Se cargó una versión sin fotos.");
+          } else {
+            throw liteRes.error;
+          }
+        } else {
+          throw productsRes.error;
+        }
+      } else {
+        setProducts(productsRes.data || []);
       }
     } catch (err: any) {
       console.error("Error fetching market data:", err);

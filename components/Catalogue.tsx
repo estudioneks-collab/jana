@@ -79,7 +79,12 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
+      const MAX_SIZE = 150 * 1024; // 150KB
       Array.from(files).forEach((file: any) => {
+        if (file.size > MAX_SIZE) {
+          alert(`La imagen "${file.name}" es muy pesada (${(file.size / 1024).toFixed(0)}KB). El límite es 150KB para asegurar que la tienda cargue instantáneamente.`);
+          return;
+        }
         const reader = new FileReader();
         reader.onloadend = () => {
           setFormData(prev => ({ 

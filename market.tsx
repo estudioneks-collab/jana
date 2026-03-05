@@ -26,6 +26,7 @@ const MarketApp: React.FC = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -38,9 +39,17 @@ const MarketApp: React.FC = () => {
   }, [cart]);
 
   const fetchProducts = async () => {
-    const { data, error } = await supabase.from('products').select('*');
-    if (!error) setProducts(data || []);
-    setLoading(false);
+    try {
+      setError(null);
+      const { data, error } = await supabase.from('products').select('*');
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (err: any) {
+      console.error("Error fetching products:", err);
+      setError(err.message || "No se pudieron cargar los productos.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const categories = useMemo(() => {
@@ -88,6 +97,26 @@ const MarketApp: React.FC = () => {
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#F2EFED]">
       <div className="w-16 h-16 border-4 border-[#5D7F8E]/20 border-t-[#5D7F8E] rounded-full animate-spin mb-4"></div>
       <p className="brand-font text-2xl text-[#2C3E50] italic">Preparando la colección...</p>
+    </div>
+  );
+
+  if (error) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F2EFED] p-10 text-center">
+      <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center mb-6 shadow-inner">
+        <X size={40} />
+      </div>
+      <h2 className="brand-font text-3xl text-[#2C3E50] mb-4 italic">¡Ups! Algo salió mal</h2>
+      <p className="text-slate-500 max-w-md mx-auto mb-8">
+        {error.includes('Failed to fetch') 
+          ? "No pudimos conectar con la tienda. Es posible que estemos en mantenimiento o el servidor esté saturado." 
+          : "Hubo un problema al cargar el catálogo. Por favor, intenta de nuevo en unos minutos."}
+      </p>
+      <button 
+        onClick={() => { setLoading(true); fetchProducts(); }}
+        className="px-8 py-4 bg-[#2C3E50] text-white rounded-2xl font-bold uppercase text-xs tracking-widest hover:bg-[#1A2632] transition-all shadow-lg"
+      >
+        Reintentar Carga
+      </button>
     </div>
   );
 

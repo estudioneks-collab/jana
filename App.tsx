@@ -108,7 +108,6 @@ const App: React.FC = () => {
         } catch (err: any) {
           console.error(`Error fetching table ${table}:`, err);
           
-          // Si es un timeout en productos, intentamos una carga "ligera" sin imágenes para que al menos vea los nombres
           if (table === 'products' && err.message?.includes('timeout')) {
             try {
               const client = getSupabase();
@@ -118,7 +117,7 @@ const App: React.FC = () => {
                   .select('id, name, category, description, totalCost, suggestedPrice, dateCreated, items');
                 
                 if (!liteError && liteData) {
-                  setDbErrorMessage("La tabla de productos es muy pesada. Se cargaron los datos sin imágenes para permitirte limpiar o editar.");
+                  setDbErrorMessage("Catálogo pesado: cargado sin fotos para mayor velocidad.");
                   return liteData as T[];
                 }
               }
@@ -126,20 +125,19 @@ const App: React.FC = () => {
               console.error("Error en carga ligera:", liteErr);
             }
           }
-
-          if (err.message?.includes('timeout')) {
-            setDbErrorMessage(`La tabla "${table}" es muy pesada y dio error de tiempo. El resto de la app funcionará.`);
-          }
           return []; 
         }
       };
 
-      const mats = await fetchTable<Material>('materials');
-      const trans = await fetchTable<Transaction>('transactions');
-      const prods = await fetchTable<Product>('products');
-      const clis = await fetchTable<Client>('clients');
-      const buds = await fetchTable<Budget>('budgets');
-      const settings = await fetchTable<{id: string, logo: string, banner: string, whatsapp: string}>('brand_settings');
+      // Carga en paralelo para máxima velocidad
+      const [mats, trans, prods, clis, buds, settings] = await Promise.all([
+        fetchTable<Material>('materials'),
+        fetchTable<Transaction>('transactions'),
+        fetchTable<Product>('products'),
+        fetchTable<Client>('clients'),
+        fetchTable<Budget>('budgets'),
+        fetchTable<{id: string, logo: string, banner: string, whatsapp: string}>('brand_settings')
+      ]);
 
       setMaterials(mats);
       setTransactions(trans);
@@ -157,7 +155,13 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error("Error cargando datos de Jana:", err);
       setIsDbConnected(false);
-      setDbErrorMessage(err.message || "Error al conectar con la base de datos.");
+      
+      let message = err.message || "Error al conectar con la base de datos.";
+      if (message.includes('Failed to fetch')) {
+        message = "No se pudo establecer conexión con Supabase. Es probable que el proyecto esté pausado o colapsado por el peso de las imágenes. Por favor, reinicia el proyecto desde el panel de Supabase.";
+      }
+      
+      setDbErrorMessage(message);
     } finally {
       setIsLoading(false);
     }
@@ -190,6 +194,11 @@ const App: React.FC = () => {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const MAX_SIZE = 150 * 1024; // 150KB
+      if (file.size > MAX_SIZE) {
+        alert(`El logo es muy pesado (${(file.size / 1024).toFixed(0)}KB). El límite es 150KB.`);
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => setLogo(reader.result as string);
       reader.readAsDataURL(file);
@@ -199,6 +208,11 @@ const App: React.FC = () => {
   const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const MAX_SIZE = 150 * 1024; // 150KB
+      if (file.size > MAX_SIZE) {
+        alert(`La portada es muy pesada (${(file.size / 1024).toFixed(0)}KB). El límite es 150KB.`);
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => setBanner(reader.result as string);
       reader.readAsDataURL(file);
