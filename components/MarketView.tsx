@@ -273,8 +273,14 @@ const MarketView: React.FC = () => {
       </a>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-slate-200/50 text-center">
+      <footer className="py-12 border-t border-slate-200/50 text-center relative">
          <p className="text-slate-400 text-sm font-medium">Jana Diseño 2026</p>
+         <button 
+            onClick={() => window.location.href = '/admin'}
+            className="mt-6 text-[10px] text-slate-300 hover:text-slate-500 uppercase tracking-[0.2em] transition-colors bg-transparent border-none cursor-pointer"
+         >
+            Admin Panel
+         </button>
       </footer>
 
       {/* Product Detail Modal */}

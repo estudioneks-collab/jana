@@ -25,7 +25,7 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
   
   const [items, setItems] = useState<BudgetItem[]>([]);
-  const [utilityPercentage, setUtilityPercentage] = useState(100); 
+  const [utilityPercentage, setUtilityPercentage] = useState(0); 
   
   const [discountType, setDiscountType] = useState<'fixed' | 'percent'>('percent');
   const [discountValue, setDiscountValue] = useState(0);
@@ -85,7 +85,7 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
     setSelectedClient(null);
     setDiscountValue(0);
     setDiscountDesc('');
-    setUtilityPercentage(100);
+    setUtilityPercentage(0);
     setStatus('pendiente');
   };
 
@@ -95,8 +95,8 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
     setItems([...items, { 
       productId: firstProd.id, 
       quantity: 1, 
-      unitCost: firstProd.totalCost, 
-      subtotal: firstProd.totalCost 
+      unitCost: firstProd.suggestedPrice || firstProd.totalCost, 
+      subtotal: firstProd.suggestedPrice || firstProd.totalCost 
     }]);
   };
 
@@ -106,7 +106,7 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
     if (field === 'productId') {
       const prod = products.find(p => p.id === value);
       item.productId = value;
-      item.unitCost = prod?.totalCost || 0;
+      item.unitCost = prod?.suggestedPrice || prod?.totalCost || 0;
     } else if (field === 'quantity') {
       item.quantity = Number(value);
     }
@@ -313,7 +313,7 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
                 {items.map((item, idx) => (
                   <div key={idx} className="flex items-center gap-6 bg-[#F2EFED]/30 p-5 rounded-3xl border border-white">
                     <select className="flex-1 bg-white border-none rounded-xl px-4 py-2.5 text-sm font-bold text-[#2C3E50] outline-none shadow-sm" value={item.productId} onChange={e => updateItem(idx, 'productId', e.target.value)}>
-                      {products.map(p => <option key={p.id} value={p.id}>{p.name} (${p.totalCost})</option>)}
+                      {products.map(p => <option key={p.id} value={p.id}>{p.name} (${p.suggestedPrice || p.totalCost})</option>)}
                     </select>
                     <input type="number" className="w-20 bg-white border-none rounded-xl px-2 py-2.5 text-center font-bold" value={item.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} />
                     <div className="w-28 text-right font-bold text-[#2C3E50]">${item.subtotal.toLocaleString()}</div>
@@ -374,9 +374,9 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
               <h3 className="text-xl font-bold brand-font mb-10 text-white/90">Resumen de Venta</h3>
               <div className="space-y-8">
                 <div className="pt-4 border-t border-white/10 space-y-4">
-                  <label className="block text-[10px] font-bold text-[#5D7F8E] uppercase tracking-widest">Margen de Utilidad ({utilityPercentage}%)</label>
+                  <label className="block text-[10px] font-bold text-[#5D7F8E] uppercase tracking-widest">Recargo / Margen Adicional ({utilityPercentage}%)</label>
                   <input type="range" min="0" max="400" step="5" className="w-full accent-[#5D7F8E]" value={utilityPercentage} onChange={e => setUtilityPercentage(Number(e.target.value))} />
-                  <div className="flex justify-between text-xs font-bold uppercase text-white/40"><span>Subtotal</span><span>${subtotalWithUtility.toLocaleString()}</span></div>
+                  <div className="flex justify-between text-xs font-bold uppercase text-white/40"><span>Subtotal (Precio Sugerido)</span><span>${subtotalWithUtility.toLocaleString()}</span></div>
                   {calculatedDiscountAmount > 0 && (
                     <div className="flex justify-between text-sm font-bold text-rose-300">
                       <span>Descuento {discountType === 'percent' ? `(${discountValue}%)` : ''}</span>
