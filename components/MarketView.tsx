@@ -242,7 +242,7 @@ const MarketView: React.FC = () => {
           <div key={p.id} className="group cursor-pointer" onClick={() => handleOpenDetail(p)}>
             <div className="aspect-[4/5] bg-white rounded-[2rem] overflow-hidden relative shadow-sm hover:shadow-xl transition-all duration-500 flex items-center justify-center p-4">
               {p.imageUrls?.length > 0 || p.imageUrl ? (
-                <img src={p.imageUrls?.[0] || p.imageUrl} alt={p.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-1000" />
+                <img src={p.imageUrls?.[0] || p.imageUrl} alt={p.name} className={`w-full h-full object-contain group-hover:scale-110 transition-transform duration-1000 ${p.hasStock === false ? 'grayscale opacity-50' : ''}`} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-200">
                    <Leaf size={64} strokeWidth={0.5} />
@@ -251,6 +251,12 @@ const MarketView: React.FC = () => {
               
               <div className="absolute top-6 left-6 w-5 h-5 bg-white/80 rounded-full shadow-inner opacity-90" />
               
+              {p.hasStock === false && (
+                <div className="absolute top-6 right-6 bg-rose-500 text-white text-[9px] font-bold px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-md">
+                  Agotado
+                </div>
+              )}
+
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 flex items-center justify-center transition-all">
                 <div className="bg-white text-[#2C3E50] px-6 py-3 rounded-full shadow-xl opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all font-bold text-xs uppercase tracking-widest">
                   Ver Detalle
@@ -300,7 +306,12 @@ const MarketView: React.FC = () => {
             </button>
 
             {/* Carrusel de Imágenes */}
-            <div className="w-full md:w-1/2 h-80 md:h-auto bg-white overflow-hidden relative flex items-center justify-center p-4">
+            <div className={`w-full md:w-1/2 h-80 md:h-auto bg-white overflow-hidden relative flex items-center justify-center p-4 ${selectedProduct.hasStock === false ? 'grayscale' : ''}`}>
+              {selectedProduct.hasStock === false && (
+                <div className="absolute top-8 left-8 z-10 bg-rose-500 text-white text-[10px] font-bold px-4 py-2 rounded-2xl uppercase tracking-widest shadow-xl">
+                  Sin Stock
+                </div>
+              )}
               {selectedProduct.imageUrls && selectedProduct.imageUrls.length > 0 ? (
                 <>
                   <img src={selectedProduct.imageUrls[currentImgIdx]} alt={selectedProduct.name} className="w-full h-full object-contain" />
@@ -352,10 +363,15 @@ const MarketView: React.FC = () => {
               <div className="mt-auto pt-8 border-t border-slate-200 space-y-4">
                 <button 
                   onClick={() => addToCart(selectedProduct)}
-                  className="w-full bg-[#2C3E50] text-white py-5 rounded-3xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-4 shadow-2xl hover:bg-[#1A2632] transition-all"
+                  disabled={selectedProduct.hasStock === false}
+                  className={`w-full py-5 rounded-3xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-4 shadow-2xl transition-all ${
+                    selectedProduct.hasStock === false 
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' 
+                    : 'bg-[#2C3E50] text-white hover:bg-[#1A2632]'
+                  }`}
                 >
                   <ShoppingBag size={22} />
-                  Añadir al Carrito
+                  {selectedProduct.hasStock === false ? 'Agotado Temporalmente' : 'Añadir al Carrito'}
                 </button>
               </div>
             </div>

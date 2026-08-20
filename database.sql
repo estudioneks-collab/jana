@@ -40,6 +40,7 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'Bijouterie'
 ALTER TABLE products ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS "imageUrls" JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS "margin" TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS "hasStock" BOOLEAN DEFAULT TRUE;
 
 -- 4. Tabla de Transacciones
 CREATE TABLE IF NOT EXISTS transactions (

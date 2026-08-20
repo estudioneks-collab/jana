@@ -38,6 +38,7 @@ export interface Product {
   margin?: number | 'manual';
   imageUrl?: string; // Mantenido por compatibilidad
   imageUrls: string[]; // Nueva propiedad
+  hasStock?: boolean;
   dateCreated: string;
 }
 

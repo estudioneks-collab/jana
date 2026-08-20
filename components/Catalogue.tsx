@@ -27,7 +27,8 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     totalCost: 0,
     suggestedPrice: 0,
     margin: 200,
-    imageUrls: []
+    imageUrls: [],
+    hasStock: true
   });
 
   // Persistencia en localStorage
@@ -78,7 +79,8 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
         totalCost: product.totalCost,
         suggestedPrice: product.suggestedPrice,
         margin: product.margin || 200,
-        imageUrls: product.imageUrls || (product.imageUrl ? [product.imageUrl] : [])
+        imageUrls: product.imageUrls || (product.imageUrl ? [product.imageUrl] : []),
+        hasStock: product.hasStock !== undefined ? product.hasStock : true
       });
     } else {
       setEditingId(null);
@@ -90,7 +92,8 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
         totalCost: 0,
         suggestedPrice: 0,
         margin: 200,
-        imageUrls: []
+        imageUrls: [],
+        hasStock: true
       });
     }
     setIsModalOpen(true);
@@ -187,6 +190,7 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
       margin: formData.margin,
       imageUrl: formData.imageUrls[0] || '', // Sincronizamos con el campo viejo por si acaso
       imageUrls: formData.imageUrls,
+      hasStock: formData.hasStock,
       dateCreated: editingId ? (products.find(p => p.id === editingId)?.dateCreated || '') : new Date().toISOString().split('T')[0]
     };
 
@@ -272,15 +276,18 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
             <div key={product.id} className="bg-white rounded-[2.5rem] border border-white shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden group flex flex-col h-full">
               <div className="aspect-[5/4] bg-[#F2EFED] relative overflow-hidden flex items-center justify-center p-2">
                 {(product.imageUrls?.length > 0 || product.imageUrl) ? (
-                  <img src={product.imageUrls?.[0] || product.imageUrl} alt={product.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-1000" />
+                  <img src={product.imageUrls?.[0] || product.imageUrl} alt={product.name} className={`w-full h-full object-contain group-hover:scale-110 transition-transform duration-1000 ${product.hasStock === false ? 'grayscale opacity-50' : ''}`} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-200">
                     <ImageIcon size={56} strokeWidth={1} />
                     <span className="text-[10px] font-bold uppercase tracking-widest opacity-50">Sin Imagen</span>
                   </div>
                 )}
-                <div className="absolute top-6 left-6 flex gap-2">
-                   <span className="bg-white/90 backdrop-blur-md text-[#5D7F8E] text-[9px] font-bold px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-sm">{product.category}</span>
+                <div className="absolute top-6 left-6 flex flex-col gap-2">
+                   <span className="bg-white/90 backdrop-blur-md text-[#5D7F8E] text-[9px] font-bold px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-sm self-start">{product.category}</span>
+                   {product.hasStock === false && (
+                     <span className="bg-rose-500 text-white text-[9px] font-bold px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-sm self-start">Agotado</span>
+                   )}
                    <button 
                     onClick={(e) => { e.stopPropagation(); handleDelete(product.id); }}
                     className="w-10 h-10 bg-white/80 backdrop-blur-md text-slate-400 hover:text-rose-500 rounded-xl transition-all shadow-lg flex items-center justify-center"
@@ -394,6 +401,23 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
                         />
                       </div>
                     </div>
+                    
+                    <div className="bg-white p-6 rounded-[1.5rem] shadow-sm border border-transparent flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-[#2C3E50]">Disponibilidad de Stock</p>
+                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-0.5">
+                          {formData.hasStock ? 'Disponible para la venta' : 'No disponible / Sin stock'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, hasStock: !formData.hasStock })}
+                        className={`relative w-14 h-8 rounded-full transition-all duration-300 ${formData.hasStock ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                      >
+                        <div className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300 ${formData.hasStock ? 'translate-x-6' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+
                     <div>
                       <label className="block text-[10px] font-bold text-[#2C3E50]/40 uppercase tracking-[0.2em] mb-2 ml-2">Descripción del Producto</label>
                       <textarea 
