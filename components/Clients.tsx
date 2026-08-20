@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Client } from '../types';
 // Fix: Added 'Users' to the imported icons from 'lucide-react'
 import { Search, Plus, Trash2, Edit2, User, Phone, Instagram, MapPin, Mail, X, Save, Users } from 'lucide-react';
@@ -9,6 +9,8 @@ interface Props {
   clients: Client[];
   setClients: React.Dispatch<React.SetStateAction<Client[]>>;
 }
+
+const STORAGE_KEY = 'jana_clients_draft';
 
 const Clients: React.FC<Props> = ({ clients, setClients }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,6 +25,31 @@ const Clients: React.FC<Props> = ({ clients, setClients }) => {
     instagram: '',
     address: ''
   });
+
+  // Persistencia en localStorage
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(STORAGE_KEY);
+    if (savedDraft) {
+      try {
+        const { formData: savedData, editingId: savedId, isModalOpen: savedOpen } = JSON.parse(savedDraft);
+        if (savedOpen) {
+          setFormData(savedData);
+          setEditingId(savedId);
+          setIsModalOpen(true);
+        }
+      } catch (e) {
+        console.error("Error al cargar borrador de clientes:", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ formData, editingId, isModalOpen }));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [formData, editingId, isModalOpen]);
 
   const handleDelete = async (id: string) => {
     if (confirm('¿Estás segura de eliminar este cliente?')) {

@@ -71,7 +71,11 @@ const MarketView: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Error fetching market data:", err);
-      setError(err.message || "Error al cargar los productos.");
+      let message = err.message || "Error al cargar los productos.";
+      if (message.includes('Failed to fetch')) {
+        message = "No se pudo conectar con Supabase. Es probable que el proyecto esté pausado por inactividad. Por favor, ve a tu panel de Supabase y asegúrate de que el proyecto esté activo (Restore).";
+      }
+      setError(message);
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Material } from '../types';
 import { Search, Plus, Trash2, Edit2, Filter, X } from 'lucide-react';
 import { db, getSupabase } from '../lib/supabase';
@@ -8,6 +8,8 @@ interface Props {
   materials: Material[];
   setMaterials: React.Dispatch<React.SetStateAction<Material[]>>;
 }
+
+const STORAGE_KEY = 'jana_inventory_draft';
 
 const Inventory: React.FC<Props> = ({ materials, setMaterials }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,6 +24,31 @@ const Inventory: React.FC<Props> = ({ materials, setMaterials }) => {
     costPerUnit: 0,
     stock: 0
   });
+
+  // Persistencia en localStorage
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(STORAGE_KEY);
+    if (savedDraft) {
+      try {
+        const { formData: savedData, editingId: savedId, isModalOpen: savedOpen } = JSON.parse(savedDraft);
+        if (savedOpen) {
+          setFormData(savedData);
+          setEditingId(savedId);
+          setIsModalOpen(true);
+        }
+      } catch (e) {
+        console.error("Error al cargar borrador de inventario:", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ formData, editingId, isModalOpen }));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [formData, editingId, isModalOpen]);
 
   const handleDelete = async (id: string) => {
     if (confirm('¿Estás segura de eliminar este material?')) {

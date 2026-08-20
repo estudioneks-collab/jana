@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Product, BudgetItem, Transaction, Client, Budget } from '../types';
 import { Plus, Trash2, FileText, Download, User, ShoppingBag, X, Search, ChevronDown, Check, Leaf, History, Edit3, Save, Eye, Lock, Unlock, Percent, DollarSign } from 'lucide-react';
 import { jsPDF } from 'jspdf';
@@ -14,6 +14,8 @@ interface Props {
   setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
   logo: string | null;
 }
+
+const STORAGE_KEY = 'jana_budget_draft';
 
 const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets, setTransactions, logo }) => {
   const [view, setView] = useState<'create' | 'history'>('create');
@@ -33,6 +35,51 @@ const BudgetBuilder: React.FC<Props> = ({ products, clients, budgets, setBudgets
   
   const [status, setStatus] = useState<'pendiente' | 'emitido'>('pendiente');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Persistencia en localStorage
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(STORAGE_KEY);
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        if (draft.view === 'create') {
+          setEditingBudgetId(draft.editingBudgetId);
+          setItems(draft.items || []);
+          setUtilityPercentage(draft.utilityPercentage || 0);
+          setDiscountType(draft.discountType || 'percent');
+          setDiscountValue(draft.discountValue || 0);
+          setDiscountDesc(draft.discountDesc || '');
+          setStatus(draft.status || 'pendiente');
+          if (draft.selectedClientId) {
+            const client = clients.find(c => c.id === draft.selectedClientId);
+            if (client) setSelectedClient(client);
+          }
+          setView('create');
+        }
+      } catch (e) {
+        console.error("Error al cargar borrador de presupuesto:", e);
+      }
+    }
+  }, [clients]);
+
+  useEffect(() => {
+    if (view === 'create' && (items.length > 0 || editingBudgetId)) {
+      const draft = {
+        view,
+        editingBudgetId,
+        items,
+        utilityPercentage,
+        discountType,
+        discountValue,
+        discountDesc,
+        status,
+        selectedClientId: selectedClient?.id
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [view, editingBudgetId, items, utilityPercentage, discountType, discountValue, discountDesc, status, selectedClient]);
 
   const filteredClients = useMemo(() => {
     if (!clientSearch) return clients;

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Product, Material } from '../types';
 import { Search, Plus, Trash2, Edit3, Tag, Calendar, X, BookmarkPlus, Camera, Image as ImageIcon, Leaf, Layers, ShoppingBag, ChevronLeft, ChevronRight } from 'lucide-react';
 import { db, getSupabase } from '../lib/supabase';
@@ -11,6 +11,7 @@ interface Props {
 }
 
 const CATEGORIES = ['Collares', 'Pulseras', 'Aros', 'Anillos', 'Sets', 'Otros'];
+const STORAGE_KEY = 'jana_catalogue_draft';
 
 const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,6 +29,31 @@ const Catalogue: React.FC<Props> = ({ products, materials, setProducts }) => {
     margin: 200,
     imageUrls: []
   });
+
+  // Persistencia en localStorage
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(STORAGE_KEY);
+    if (savedDraft) {
+      try {
+        const { formData: savedData, editingId: savedId, isModalOpen: savedOpen } = JSON.parse(savedDraft);
+        if (savedOpen) {
+          setFormData(savedData);
+          setEditingId(savedId);
+          setIsModalOpen(true);
+        }
+      } catch (e) {
+        console.error("Error al cargar borrador:", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ formData, editingId, isModalOpen }));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [formData, editingId, isModalOpen]);
 
   const handleDelete = async (id: string) => {
     if (confirm('¿Deseas eliminar este diseño?')) {

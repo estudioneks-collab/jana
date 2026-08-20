@@ -46,7 +46,11 @@ const MarketApp: React.FC = () => {
       setProducts(data || []);
     } catch (err: any) {
       console.error("Error fetching products:", err);
-      setError(err.message || "No se pudieron cargar los productos.");
+      let message = err.message || "No se pudieron cargar los productos.";
+      if (message.includes('Failed to fetch')) {
+        message = "No se pudo conectar con la tienda. Es probable que el proyecto de Supabase esté pausado por inactividad. Por favor, asegúrate de que el proyecto esté activo en tu panel de Supabase.";
+      }
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -107,9 +111,7 @@ const MarketApp: React.FC = () => {
       </div>
       <h2 className="brand-font text-3xl text-[#2C3E50] mb-4 italic">¡Ups! Algo salió mal</h2>
       <p className="text-slate-500 max-w-md mx-auto mb-8">
-        {error.includes('Failed to fetch') 
-          ? "No pudimos conectar con la tienda. Es posible que estemos en mantenimiento o el servidor esté saturado." 
-          : "Hubo un problema al cargar el catálogo. Por favor, intenta de nuevo en unos minutos."}
+        {error}
       </p>
       <button 
         onClick={() => { setLoading(true); fetchProducts(); }}
